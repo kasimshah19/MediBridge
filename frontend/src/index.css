@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@theme {
+  --font-heading: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Primary: Teal */
+  --color-primary-50: #F0FDFA;
+  --color-primary-100: #CCFBF1;
+  --color-primary-200: #99F6E4;
+  --color-primary-300: #5EEAD4;
+  --color-primary-400: #2DD4BF;
+  --color-primary-500: #14B8A6;
+  --color-primary-600: #0D9488;
+  --color-primary-700: #0F766E;
+  --color-primary-800: #115E59;
+  --color-primary-900: #134E4A;
+
+  /* Secondary: Sky */
+  --color-secondary-50: #F0F9FF;
+  --color-secondary-100: #E0F2FE;
+  --color-secondary-200: #BAE6FD;
+  --color-secondary-300: #7DD3FC;
+  --color-secondary-400: #38BDF8;
+  --color-secondary-500: #0EA5E9;
+  --color-secondary-600: #0284C7;
+  --color-secondary-700: #0369A1;
+  --color-secondary-800: #075985;
+  --color-secondary-900: #0C4A6E;
+
+  /* Accent */
+  --color-mint: #34D399;
+  --color-coral: #FB7185;
+
+  /* Semantic */
+  --color-warning: #F59E0B;
+  --color-danger: #E11D48;
+  --color-success: #10B981;
+
+  /* Background & Surface */
+  --color-bg-start: #F0FDFA;
+  --color-bg-end: #F0F9FF;
+  --color-surface: #FFFFFF;
+
+  /* Text Colors */
+  --color-text-heading: #1E293B;
+  --color-text-body: #475569;
+  --color-text-muted: #94A3B8;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-body);
+  background: linear-gradient(135deg, #F0FDFA 0%, #F0F9FF 100%);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--color-text-heading);
+}
+
+/* Custom Utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, #0D9488 0%, #0EA5E9 100%);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #0D9488 0%, #0EA5E9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.shadow-soft {
+  box-shadow: 0 4px 20px -2px rgba(13, 148, 136, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+.shadow-hover {
+  box-shadow: 0 10px 30px -4px rgba(13, 148, 136, 0.14), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+}
+
+.focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25);
+}
