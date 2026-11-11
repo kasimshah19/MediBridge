@@ -11,14 +11,27 @@ const api = axios.create({
   },
 });
 
-// Response interceptor placeholder (Phase 1: handling 401 unauthenticated redirects)
+// Response interceptor: on 401 redirect to login unless it's the initial bootstrap call
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Phase 1: auto redirect or refresh token on 401
+    const isAuthBootstrap = error.config?.url?.includes('/auth/me');
+    const isLoginEndpoint = error.config?.url?.includes('/auth/login');
+    const isRegisterEndpoint = error.config?.url?.includes('/auth/register');
+
+    if (
+      error.response?.status === 401 &&
+      !isAuthBootstrap &&
+      !isLoginEndpoint &&
+      !isRegisterEndpoint
+    ) {
+      // Clear any client state and redirect if needed
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.href = '/login?expired=1';
+      }
+    }
     return Promise.reject(error);
   }
 );
 
 export default api;
-

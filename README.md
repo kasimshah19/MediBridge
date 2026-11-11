@@ -136,6 +136,11 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 | `JWT_EXPIRES_IN` | No    | JWT expiry duration (default: 7d)       |
 | `CLIENT_URL`   | No       | Frontend URL for CORS (default: http://localhost:5173) |
 | `CRON_SECRET`  | No       | Secret for scheduled job endpoints      |
+| `ADMIN_NAME`   | No       | Name for seed administrator account     |
+| `ADMIN_EMAIL`  | No       | Email for seed administrator account    |
+| `ADMIN_PASSWORD` | No     | Password for seed administrator account |
+| `COOKIE_SECURE` | No      | Set to true in production for HTTPS     |
+| `EMAIL_FROM`   | No       | Sender email address                    |
 | `SMTP_HOST`    | No       | SMTP server host for emails             |
 | `SMTP_PORT`    | No       | SMTP server port                        |
 | `SMTP_USER`    | No       | SMTP username                           |
@@ -158,6 +163,8 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 | `npm run dev`  | Start dev server with nodemon   |
 | `npm start`    | Start production server         |
 | `npm test`     | Run tests with Jest             |
+| `npm run seed:admin` | Seed initial administrator account |
+| `npm run list:collections` | List initialized MongoDB collections |
 
 ### Frontend
 
@@ -174,7 +181,7 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 | Phase | Name                              | Status        |
 | ----- | --------------------------------- | ------------- |
 | 0     | ✅ Setup & Foundation             | **Complete**  |
-| 1     | Auth & Roles                      | Planned       |
+| 1     | ✅ Auth & Roles                   | **Complete**  |
 | 2     | Landing Page & Org Onboarding     | Planned       |
 | 3     | Donation Submission               | Planned       |
 | 4     | Expiry Tracker                    | Planned       |

@@ -1,15 +1,24 @@
 import env from './config/env.js';
 import connectDB from './config/db.js';
+import syncDatabaseCollections from './config/syncDatabase.js';
 import app from './app.js';
 
 const PORT = env.PORT;
 
 /**
- * Start the server: connect to database first, then listen on the configured port.
+ * Start the server:
+ * 1. Connect to MongoDB Atlas
+ * 2. Synchronize collections and indexes
+ * 3. Start listening on the designated PORT
  */
 const startServer = async () => {
   // Connect to MongoDB
-  await connectDB();
+  const conn = await connectDB();
+
+  // If connected, sync all 9 collections & indexes
+  if (conn) {
+    await syncDatabaseCollections();
+  }
 
   const server = app.listen(PORT, () => {
     console.log(`🚀 MediBridge API running on port ${PORT}`);
@@ -36,4 +45,3 @@ const startServer = async () => {
 };
 
 startServer();
-
