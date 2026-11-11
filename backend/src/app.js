@@ -5,9 +5,11 @@ import morgan from 'morgan';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import mongoSanitize from 'express-mongo-sanitize';
+import mongoose from 'mongoose';
 import apiLimiter from './middleware/rateLimiter.js';
 import routes from './routes/index.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import ApiError from './utils/ApiError.js';
 
 const app = express();
 
@@ -46,6 +48,28 @@ app.use('/api', apiLimiter);
 // Serve uploaded files statically
 app.use('/uploads', express.static('uploads'));
 
+// Ensure database is connected before handling data queries (skip for health check & test env)
+app.use((req, _res, next) => {
+  if (
+    process.env.NODE_ENV === 'test' ||
+    req.path === '/api/health' ||
+    req.path === '/health'
+  ) {
+    return next();
+  }
+
+  if (mongoose.connection.readyState !== 1) {
+    return next(
+      new ApiError(
+        503,
+        'Database is currently disconnected. Please verify your MongoDB Atlas IP whitelist (Network Access: 0.0.0.0/0) and credentials in backend/.env.'
+      )
+    );
+  }
+
+  next();
+});
+
 // API routes
 app.use('/api', routes);
 
@@ -56,4 +80,3 @@ app.use(notFound);
 app.use(errorHandler);
 
 export default app;
-
