@@ -38,3 +38,4 @@ export const syncDatabaseCollections = async () => {
 };
 
 export default syncDatabaseCollections;
+

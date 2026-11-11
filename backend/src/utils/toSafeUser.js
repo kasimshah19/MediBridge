@@ -20,3 +20,4 @@ export const toSafeUser = (user) => {
 };
 
 export default toSafeUser;
+

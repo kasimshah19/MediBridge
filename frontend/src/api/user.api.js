@@ -14,3 +14,4 @@ export const getMyAuditLogs = async () => {
   const response = await api.get('/users/me/audit');
   return response.data;
 };
+

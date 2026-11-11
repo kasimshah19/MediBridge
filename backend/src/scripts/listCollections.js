@@ -32,3 +32,4 @@ const listCollections = async () => {
 };
 
 listCollections();
+
