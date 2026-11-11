@@ -119,10 +119,12 @@ export const register = asyncHandler(async (req, res, next) => {
  * @route POST /api/auth/login
  */
 export const login = asyncHandler(async (req, res, next) => {
-  const { email, password, rememberMe = false } = req.body;
+  const { rememberMe = false } = req.body;
+  const email = (req.body.email || '').trim().toLowerCase();
+  const password = typeof req.body.password === 'string' ? req.body.password.trim() : '';
 
   // 1. Fetch user including passwordHash for comparison
-  const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash');
+  const user = await User.findOne({ email }).select('+passwordHash');
 
   if (!user) {
     await recordAuditLog({

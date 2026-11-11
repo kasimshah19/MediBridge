@@ -45,7 +45,11 @@ export default function Login() {
   const onSubmit = async (values) => {
     setAuthError('');
     try {
-      const user = await login(values);
+      const user = await login({
+        ...values,
+        email: values.email.trim(),
+        password: values.password.trim(),
+      });
       toast.success(`Welcome back, ${user.name}!`);
       const targetPath = getDashboardPathForUser(user);
       navigate(targetPath, { replace: true });
