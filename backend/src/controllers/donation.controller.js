@@ -1,5 +1,6 @@
 import Donation from '../models/Donation.js';
 import Medicine from '../models/Medicine.js';
+import Verification from '../models/Verification.js';
 import Notification from '../models/Notification.js';
 import AuditLog from '../models/AuditLog.js';
 import {
@@ -10,6 +11,7 @@ import {
   SCREENING_CODES,
   ROLES,
   APPROVAL_STATUS,
+  REJECTION_REASON_LABELS,
 } from '../config/constants.js';
 import env from '../config/env.js';
 import ApiError from '../utils/ApiError.js';
@@ -18,6 +20,73 @@ import { generateDonationCode, generateMedicineId } from '../utils/generateId.js
 import { screenMedicine } from '../services/screening.service.js';
 import { calculatePriority, normalizeExpiryDate, decorateMedicine } from '../services/expiry.service.js';
 import storageService from '../services/storage.service.js';
+import verificationService from '../services/verification.service.js';
+
+/**
+ * Helper to attach donor-safe verification summary to medicine items.
+ * Strips pharmacist personal phone/email and internal details.
+ */
+const attachDonorSafeVerification = async (items = []) => {
+  if (!items || items.length === 0) return items;
+
+  const vIds = [];
+  for (const item of items) {
+    const raw = item?.toObject ? item.toObject() : item;
+    if (raw?.verificationState?.latestVerificationId) {
+      vIds.push(raw.verificationState.latestVerificationId);
+    }
+  }
+
+  const verifications =
+    vIds.length > 0
+      ? await Verification.find({ _id: { $in: vIds } }).populate(
+          'pharmacistId',
+          'firstName name pharmacyName'
+        )
+      : [];
+
+  const vMap = new Map();
+  for (const v of verifications) {
+    vMap.set(v._id.toString(), v);
+  }
+
+  return items.map((item) => {
+    const raw = item?.toObject ? item.toObject() : { ...item };
+    const vId = raw?.verificationState?.latestVerificationId?.toString();
+    const v = vId ? vMap.get(vId) : null;
+
+    let verificationData = null;
+    if (v) {
+      const pharmUser = v.pharmacistId || {};
+      const pharmFirstName =
+        pharmUser.firstName || (pharmUser.name ? pharmUser.name.split(' ')[0] : 'Pharmacist');
+
+      const checklistObj = v.checklist?.toObject ? v.checklist.toObject() : v.checklist || {};
+      const checksPassedCount = Object.values(checklistObj).filter(Boolean).length;
+
+      verificationData = {
+        latestDecision: v.decision,
+        reasonCode: v.reasonCode,
+        reasonLabel: v.reasonCode ? REJECTION_REASON_LABELS[v.reasonCode] || v.reasonCode : null,
+        reason: v.reason,
+        question: v.question,
+        requestedTypes: v.requestedTypes || [],
+        round: v.round,
+        decidedAt: v.verifiedAt,
+        checksPassedCount,
+        pharmacist: {
+          firstName: pharmFirstName,
+          pharmacyName: pharmUser.pharmacyName || null,
+        },
+      };
+    }
+
+    return {
+      ...raw,
+      verification: verificationData,
+    };
+  });
+};
 
 /**
  * 1. POST /api/donations - Create a DRAFT donation with items.
@@ -166,13 +235,16 @@ export const getMyDonations = async (req, res, next) => {
     ]);
 
     const now = new Date();
-    const formattedDonations = donations.map((d) => {
-      const dObj = d.toObject ? d.toObject() : { ...d };
-      if (Array.isArray(dObj.items)) {
-        dObj.items = dObj.items.map((item) => decorateMedicine(item, now));
-      }
-      return dObj;
-    });
+    const formattedDonations = await Promise.all(
+      donations.map(async (d) => {
+        const dObj = d.toObject ? d.toObject() : { ...d };
+        if (Array.isArray(dObj.items)) {
+          const decorated = dObj.items.map((item) => decorateMedicine(item, now));
+          dObj.items = await attachDonorSafeVerification(decorated);
+        }
+        return dObj;
+      })
+    );
 
     // Calculate status counts for UI tabs
     const [
@@ -180,6 +252,7 @@ export const getMyDonations = async (req, res, next) => {
       draftCount,
       submittedCount,
       underVerificationCount,
+      needsResponseCount,
       approvedCount,
       rejectedCount,
       cancelledCount,
@@ -188,6 +261,7 @@ export const getMyDonations = async (req, res, next) => {
       Donation.countDocuments({ donorId, status: DONATION_STATUS.DRAFT }),
       Donation.countDocuments({ donorId, status: DONATION_STATUS.SUBMITTED }),
       Donation.countDocuments({ donorId, status: DONATION_STATUS.UNDER_VERIFICATION }),
+      Donation.countDocuments({ donorId, status: DONATION_STATUS.MORE_INFO_REQUIRED }),
       Donation.countDocuments({
         donorId,
         status: {
@@ -222,6 +296,7 @@ export const getMyDonations = async (req, res, next) => {
             draft: draftCount,
             submitted: submittedCount,
             under_verification: underVerificationCount,
+            needsResponse: needsResponseCount,
             approved: approvedCount,
             rejected: rejectedCount,
             cancelled: cancelledCount,
@@ -246,6 +321,7 @@ export const getMyDonationsSummary = async (req, res, next) => {
       total,
       drafts,
       underVerification,
+      needsResponse,
       approved,
       rejected,
       cancelled,
@@ -259,10 +335,10 @@ export const getMyDonationsSummary = async (req, res, next) => {
           $in: [
             DONATION_STATUS.SUBMITTED,
             DONATION_STATUS.UNDER_VERIFICATION,
-            DONATION_STATUS.MORE_INFO_REQUIRED,
           ],
         },
       }),
+      Donation.countDocuments({ donorId, status: DONATION_STATUS.MORE_INFO_REQUIRED }),
       Donation.countDocuments({
         donorId,
         status: {
@@ -289,6 +365,7 @@ export const getMyDonationsSummary = async (req, res, next) => {
           total,
           drafts,
           underVerification,
+          needsResponse,
           approved,
           rejected,
           cancelled,
@@ -328,7 +405,8 @@ export const getDonationById = async (req, res, next) => {
     const now = new Date();
     const donationObj = donation.toObject ? donation.toObject() : { ...donation };
     if (Array.isArray(donationObj.items)) {
-      donationObj.items = donationObj.items.map((item) => decorateMedicine(item, now));
+      const decorated = donationObj.items.map((item) => decorateMedicine(item, now));
+      donationObj.items = await attachDonorSafeVerification(decorated);
     }
 
     return res.status(200).json(new ApiResponse(200, donationObj, 'Donation retrieved successfully.'));
@@ -508,6 +586,7 @@ export const deleteDraftDonation = async (req, res, next) => {
 
 /**
  * 7. POST /api/donations/:id/items/:itemId/photos - Upload photo for a medicine item.
+ * Allowed in DRAFT status OR when the item has MORE_INFO_REQUIRED status.
  */
 export const uploadItemPhoto = async (req, res, next) => {
   try {
@@ -519,13 +598,19 @@ export const uploadItemPhoto = async (req, res, next) => {
       throw new ApiError(404, 'Donation not found.');
     }
 
-    if (donation.status !== DONATION_STATUS.DRAFT) {
-      throw new ApiError(409, 'Photos can only be added to draft donations.');
-    }
-
     const medicine = await Medicine.findOne({ _id: itemId, donationId: donation._id });
     if (!medicine) {
       throw new ApiError(404, 'Medicine item not found in this donation.');
+    }
+
+    const isDraft = donation.status === DONATION_STATUS.DRAFT;
+    const isMoreInfoItem = medicine.status === MEDICINE_STATUS.MORE_INFO_REQUIRED;
+
+    if (!isDraft && !isMoreInfoItem) {
+      throw new ApiError(
+        409,
+        'Photos can only be added to draft donations or medicine items requiring additional clarification.'
+      );
     }
 
     if (medicine.photos.length >= env.MAX_PHOTOS_PER_MEDICINE) {
@@ -576,7 +661,7 @@ export const uploadItemPhoto = async (req, res, next) => {
 };
 
 /**
- * 8. DELETE /api/donations/:id/items/:itemId/photos/:photoId - Delete photo from draft.
+ * 8. DELETE /api/donations/:id/items/:itemId/photos/:photoId - Delete photo from draft or more_info item.
  */
 export const deleteItemPhoto = async (req, res, next) => {
   try {
@@ -588,10 +673,6 @@ export const deleteItemPhoto = async (req, res, next) => {
       throw new ApiError(404, 'Donation not found.');
     }
 
-    if (donation.status !== DONATION_STATUS.DRAFT) {
-      throw new ApiError(409, 'Photos can only be removed from draft donations.');
-    }
-
     const medicine = await Medicine.findOne({
       _id: itemId,
       donationId: donation._id,
@@ -599,6 +680,16 @@ export const deleteItemPhoto = async (req, res, next) => {
 
     if (!medicine) {
       throw new ApiError(404, 'Medicine item not found in this donation.');
+    }
+
+    const isDraft = donation.status === DONATION_STATUS.DRAFT;
+    const isMoreInfoItem = medicine.status === MEDICINE_STATUS.MORE_INFO_REQUIRED;
+
+    if (!isDraft && !isMoreInfoItem) {
+      throw new ApiError(
+        409,
+        'Photos can only be removed from draft donations or medicine items requiring additional clarification.'
+      );
     }
 
     const photo = medicine.photos.id(photoId);
@@ -958,6 +1049,33 @@ export const cancelDonation = async (req, res, next) => {
   }
 };
 
+/**
+ * 12. POST /api/donations/:id/items/:itemId/respond - Donor responds to pharmacist clarification request.
+ */
+export const respondToMoreInfo = async (req, res, next) => {
+  try {
+    const { id, itemId } = req.params;
+    const { message, storageHistory, batchNumber } = req.body;
+    const donorId = req.user._id;
+
+    const result = await verificationService.respondToMoreInfo({
+      donationId: id,
+      itemId,
+      donorId,
+      message,
+      storageHistory,
+      batchNumber,
+      req,
+    });
+
+    return res.status(200).json(
+      new ApiResponse(200, result, 'Clarification submitted successfully. Item returned to verification queue.')
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
   createDraftDonation,
   getMyDonations,
@@ -970,4 +1088,5 @@ export default {
   streamItemPhoto,
   submitDonation,
   cancelDonation,
+  respondToMoreInfo,
 };

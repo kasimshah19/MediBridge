@@ -92,6 +92,7 @@ export const DONATION_STATUS_ARRAY = Object.values(DONATION_STATUS);
 // Medicine statuses (inventory)
 export const MEDICINE_STATUS = {
   PENDING: 'pending',
+  MORE_INFO_REQUIRED: 'more_info_required',
   APPROVED: 'approved',
   REJECTED: 'rejected',
   EXPIRED: 'expired',
@@ -242,6 +243,7 @@ export const TRACKED_STATUSES = [
   MEDICINE_STATUS.PENDING,
   MEDICINE_STATUS.APPROVED,
   MEDICINE_STATUS.RESERVED,
+  MEDICINE_STATUS.MORE_INFO_REQUIRED,
 ];
 
 // Notification types
@@ -254,6 +256,10 @@ export const NOTIFICATION_TYPES = {
   EXPIRY_WARNING: 'expiry_warning',
   EXPIRY_CRITICAL: 'expiry_critical',
   EXPIRY_EXPIRED: 'expiry_expired',
+  VERIFICATION_APPROVED: 'verification_approved',
+  VERIFICATION_REJECTED: 'verification_rejected',
+  VERIFICATION_MORE_INFO: 'verification_more_info',
+  VERIFICATION_NEW_REQUEST: 'verification_new_request',
 };
 
 export const NOTIFICATION_TYPES_ARRAY = Object.values(NOTIFICATION_TYPES);
@@ -266,6 +272,69 @@ export const VERIFICATION_DECISION = {
 };
 
 export const VERIFICATION_DECISION_ARRAY = Object.values(VERIFICATION_DECISION);
+
+// Pharmacist Rejection Reason Codes
+export const REJECTION_REASON_CODES = {
+  PACKAGING_COMPROMISED: 'PACKAGING_COMPROMISED',
+  BATCH_UNVERIFIABLE: 'BATCH_UNVERIFIABLE',
+  EXPIRY_INVALID_OR_UNREADABLE: 'EXPIRY_INVALID_OR_UNREADABLE',
+  STORAGE_UNRELIABLE: 'STORAGE_UNRELIABLE',
+  SUSPECTED_COUNTERFEIT_OR_TAMPERED: 'SUSPECTED_COUNTERFEIT_OR_TAMPERED',
+  POLICY_INELIGIBLE: 'POLICY_INELIGIBLE',
+  OTHER: 'OTHER',
+};
+
+export const REJECTION_REASON_CODES_ARRAY = Object.values(REJECTION_REASON_CODES);
+
+export const REJECTION_REASON_LABELS = {
+  [REJECTION_REASON_CODES.PACKAGING_COMPROMISED]: 'Packaging compromised or opened',
+  [REJECTION_REASON_CODES.BATCH_UNVERIFIABLE]: 'Batch number unverifiable or missing',
+  [REJECTION_REASON_CODES.EXPIRY_INVALID_OR_UNREADABLE]: 'Expiry date invalid or unreadable',
+  [REJECTION_REASON_CODES.STORAGE_UNRELIABLE]: 'Storage history unreliable or exposed to adverse conditions',
+  [REJECTION_REASON_CODES.SUSPECTED_COUNTERFEIT_OR_TAMPERED]: 'Suspected counterfeit or tampered',
+  [REJECTION_REASON_CODES.POLICY_INELIGIBLE]: 'Ineligible under medicine donation policy',
+  [REJECTION_REASON_CODES.OTHER]: 'Other quality or safety concern',
+};
+
+// More info request types
+export const MORE_INFO_REQUEST_TYPES = {
+  CLEARER_BATCH_PHOTO: 'clearer_batch_photo',
+  CLEARER_EXPIRY_PHOTO: 'clearer_expiry_photo',
+  PACKAGING_PHOTOS: 'packaging_photos',
+  STORAGE_DETAILS: 'storage_details',
+  SOURCE_DETAILS: 'source_details',
+  OTHER: 'other',
+};
+
+export const MORE_INFO_REQUEST_TYPES_ARRAY = Object.values(MORE_INFO_REQUEST_TYPES);
+
+export const MORE_INFO_REQUEST_LABELS = {
+  [MORE_INFO_REQUEST_TYPES.CLEARER_BATCH_PHOTO]: 'Clearer batch number photo',
+  [MORE_INFO_REQUEST_TYPES.CLEARER_EXPIRY_PHOTO]: 'Clearer expiry date photo',
+  [MORE_INFO_REQUEST_TYPES.PACKAGING_PHOTOS]: 'Full packaging photos (all sides)',
+  [MORE_INFO_REQUEST_TYPES.STORAGE_DETAILS]: 'Storage history / storage details',
+  [MORE_INFO_REQUEST_TYPES.SOURCE_DETAILS]: 'Source / purchase details',
+  [MORE_INFO_REQUEST_TYPES.OTHER]: 'Other information',
+};
+
+// 6-Point verification checklist keys
+export const CHECKLIST_KEYS = [
+  'packagingIntact',
+  'batchReadable',
+  'expiryValid',
+  'storageReliable',
+  'authenticityEstablished',
+  'policyEligible',
+];
+
+export const CHECKLIST_DESCRIPTIONS = {
+  packagingIntact: 'Packaging intact and unopened',
+  batchReadable: 'Batch number readable and matches photo',
+  expiryValid: 'Expiry valid and readable',
+  storageReliable: 'Storage history reliable',
+  authenticityEstablished: 'Source and authenticity established',
+  policyEligible: 'Eligible under donation policy',
+};
 
 // Request status
 export const REQUEST_STATUS = {
@@ -318,6 +387,14 @@ export const AUDIT_ACTIONS = {
   EXPIRY_JOB_RUN: 'EXPIRY_JOB_RUN',
   MEDICINE_AUTO_EXPIRED: 'MEDICINE_AUTO_EXPIRED',
   DONATION_AUTO_CLOSED_EXPIRED: 'DONATION_AUTO_CLOSED_EXPIRED',
+  VERIFICATION_CLAIMED: 'VERIFICATION_CLAIMED',
+  VERIFICATION_RELEASED: 'VERIFICATION_RELEASED',
+  VERIFICATION_CLAIM_EXPIRED_TAKEOVER: 'VERIFICATION_CLAIM_EXPIRED_TAKEOVER',
+  VERIFICATION_APPROVED: 'VERIFICATION_APPROVED',
+  VERIFICATION_REJECTED: 'VERIFICATION_REJECTED',
+  VERIFICATION_MORE_INFO_REQUESTED: 'VERIFICATION_MORE_INFO_REQUESTED',
+  DONOR_MORE_INFO_RESPONDED: 'DONOR_MORE_INFO_RESPONDED',
+  VERIFICATION_ADMIN_FORCE_RELEASE: 'VERIFICATION_ADMIN_FORCE_RELEASE',
 };
 
 export const AUDIT_ACTIONS_ARRAY = Object.values(AUDIT_ACTIONS);

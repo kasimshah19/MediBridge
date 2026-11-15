@@ -64,6 +64,30 @@ export const runAdminExpiryCheck = async ({ dryRun = false, asOf } = {}) => {
   return response.data;
 };
 
+/**
+ * Get verification summary & active claims for admins.
+ */
+export const getAdminVerificationSummary = async () => {
+  const response = await api.get('/admin/verification/summary');
+  return response.data;
+};
+
+/**
+ * Get filterable verification log for admins.
+ */
+export const getAdminVerificationLog = async (params = {}) => {
+  const response = await api.get('/admin/verification/log', { params });
+  return response.data;
+};
+
+/**
+ * Force release a claimed donation.
+ */
+export const forceReleaseDonation = async (id) => {
+  const response = await api.post(`/admin/verification/donations/${id}/force-release`);
+  return response.data;
+};
+
 export default {
   getAdminOrganizations,
   getAdminOrganizationById,
@@ -73,5 +97,8 @@ export default {
   getAdminOverview,
   getAdminExpiryJobs,
   runAdminExpiryCheck,
+  getAdminVerificationSummary,
+  getAdminVerificationLog,
+  forceReleaseDonation,
 };
 

@@ -67,14 +67,29 @@ export default function AdminDashboard() {
       </div>
 
       {/* Real Live StatCards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+        <Link to="/admin/verification">
+          <StatCard
+            title="Awaiting Verification"
+            value={overview?.donationsAwaitingVerification ?? 0}
+            icon={ClipboardCheck}
+            color="amber"
+            description={
+              overview?.oldestWaitingHours
+                ? `Oldest waiting ${overview.oldestWaitingHours}h`
+                : 'Queue is clear'
+            }
+            className="hover:border-amber-300 transition-all cursor-pointer"
+          />
+        </Link>
+
         <Link to="/admin/organizations?status=pending">
           <StatCard
             title="Pending Organizations"
             value={overview?.pendingOrganizations ?? 0}
             icon={Clock}
             color="amber"
-            description="Awaiting document verification"
+            description="Awaiting verification"
             className="hover:border-amber-300 transition-all cursor-pointer"
           />
         </Link>
@@ -113,7 +128,7 @@ export default function AdminDashboard() {
         </Link>
 
         <StatCard
-          title="Total Registered Donors"
+          title="Total Donors"
           value={overview?.totalDonors ?? 0}
           icon={Users}
           color="emerald"

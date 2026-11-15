@@ -105,6 +105,36 @@ export default function DonorDashboard() {
         </div>
       </div>
 
+      {/* Action Needed Banner: More Info Requested */}
+      {summary?.needsResponse > 0 && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-soft">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-heading font-bold text-amber-950">
+                Action Required: Clarification Requested ({summary.needsResponse} donation{summary.needsResponse > 1 ? 's' : ''})
+              </h3>
+              <p className="text-xs text-amber-900/80 mt-0.5 leading-relaxed">
+                A verifying pharmacist has requested additional details or clearer photos for medicines in your donations.
+                Please respond promptly so verification can be completed.
+              </p>
+            </div>
+          </div>
+          <Link to="/donor/donations?tab=more_info_required" className="flex-shrink-0 w-full sm:w-auto">
+            <Button
+              variant="primary"
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold w-full sm:w-auto text-xs"
+            >
+              <span>Review & Respond</span>
+              <ArrowRight size={13} className="ml-1.5" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* 2. Real StatCards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Donations */}

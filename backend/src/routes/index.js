@@ -24,6 +24,7 @@ router.use('/users', userRoutes);
 router.use('/organizations', organizationRoutes);
 router.use('/donations', donationRoutes);
 router.use('/medicines', medicineRoutes);
+router.use('/verification', verificationRoutes);
 router.use('/verifications', verificationRoutes);
 router.use('/requests', requestRoutes);
 router.use('/transfers', transferRoutes);

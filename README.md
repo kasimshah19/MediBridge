@@ -352,6 +352,84 @@ Uploaded files are **never** served through static Express paths. All requests r
 
 ---
 
+## 🔬 Pharmacist Verification Workflow (Phase 5)
+
+Phase 5 introduces a comprehensive, multi-round verification engine ensuring that every medicine is inspected and verified by a licensed, admin-approved pharmacist before becoming eligible for NGO matching.
+
+### 1. Verification Flow Architecture
+
+```
+[Donor Submits Donation]
+         │
+         ▼
+[Automated Screening Engine]
+    ├── All Items Fail ──► Status: screening_rejected
+    └── ≥1 Item Passes ──► Status: under_verification
+                                 │
+                                 ▼
+                     [Verification Queue]
+              (Filtered by priority, wait time)
+                                 │
+                                 ▼
+                    [Pharmacist Claims Donation]
+                   (Atomic claim, 60-min TTL lock)
+                                 │
+                                 ▼
+                [6-Point Physical Safety Checklist]
+         1. Expiry date matches and exceeds threshold
+         2. Batch number legible and matches
+         3. Factory tamper-evident seal unbroken
+         4. Blister / packaging free of tears or punctures
+         5. Physical condition acceptable (no discoloration)
+         6. Clear packaging & label photos provided
+                                 │
+         ┌───────────────────────┼────────────────────────┐
+         ▼                       ▼                        ▼
+    [APPROVE]               [REJECT]              [REQUEST MORE INFO]
+All 6 checklist items    Requires structured     Requires question +
+must be confirmed        reason code + note       type tags (round++)
+         │                       │                        │
+         ▼                       ▼                        ▼
+Status derivation runs   Audit trail logged       Status: more_info_required
+(approved / partial)                             (Donor notified to reply)
+                                                          │
+                                                          ▼
+                                                 [Donor Clarification]
+                                                 Message + photos uploaded
+                                                          │
+                                                          ▼
+                                                 [Item Returns to Queue]
+                                                  Round increments +1
+```
+
+### 2. Pure Donation Status Derivation Matrix
+
+Donation status is deterministically derived from its constituent medicine item statuses:
+
+| Medicine Items Condition | Derived Donation Status | Description |
+| ------------------------ | ----------------------- | ----------- |
+| All items `approved` | `approved` | Whole donation is verified and ready for NGO allocation |
+| All items `rejected` | `rejected` | All items failed physical safety verification |
+| ≥1 `approved` AND ≥1 `rejected` (0 pending/more_info) | `partially_approved` | Only approved items will be matched; rejected items retired |
+| ≥1 item `more_info_required` | `more_info_required` | Waiting for donor clarification or additional photos |
+| ≥1 item `pending` (0 more_info) | `under_verification` | Items still awaiting pharmacist decision |
+
+### 3. Verification Claim TTL & Concurrency Guard
+
+To prevent two pharmacists from simultaneously reviewing the same donation or collisions:
+- **Atomic Locking**: Pharmacist claims set `review.claimedBy`, `review.claimedAt`, and `review.claimExpiresAt` (`VERIFICATION_CLAIM_TTL_MINUTES=60`).
+- **Lazy Expiry & Takeover**: If a claim expires without being released, another pharmacist can take over the claim cleanly.
+- **Admin Override**: Admins can force-release stuck claims at any time with full audit logging.
+- **Optimistic Concurrency**: Decisions require matching the item's `version` counter via `findOneAndUpdate`, preventing double-submits.
+
+### 4. Privacy & Data Boundaries
+
+- **Pharmacist View**: Verifying pharmacists receive only the donor's first name, city, state, and pincode. Contact phone numbers, email addresses, pickup address line 1, and GPS coordinates are **strictly stripped** from review payloads.
+- **Donor View**: Donors see the verified status, round number, 6-point checklist count, pharmacist first name, and pharmacy name. Pharmacist email addresses and phone numbers are **never exposed**.
+- **Immutable Audit Trail**: All verification decisions are recorded in an append-only `Verification` collection with round counters. Records cannot be updated or deleted.
+
+---
+
 ## 👥 Roles
 
 - **Donor** — Submit unused, sealed medicines for donation

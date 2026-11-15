@@ -113,6 +113,14 @@ export const cancelDonation = async (id, reason) => {
   return response.data;
 };
 
+/**
+ * Submit clarification response for a medicine item requiring more info.
+ */
+export const respondToClarification = async (donationId, itemId, data) => {
+  const response = await api.post(`/donations/${donationId}/items/${itemId}/respond`, data);
+  return response.data;
+};
+
 export default {
   createDraftDonation,
   getMyDonations,
@@ -125,5 +133,6 @@ export default {
   getItemPhotoBlob,
   submitDonation,
   cancelDonation,
+  respondToClarification,
 };
 

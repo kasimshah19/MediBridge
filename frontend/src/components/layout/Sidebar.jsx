@@ -64,6 +64,38 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
         path: '/admin/expiry',
         icon: Clock,
         active: location.pathname.startsWith('/admin/expiry'),
+      },
+      {
+        name: 'Verification Log',
+        path: '/admin/verification',
+        icon: ClipboardCheck,
+        active: location.pathname.startsWith('/admin/verification'),
+      }
+    );
+  }
+
+  // Pharmacist active navigation
+  if (user.role === 'pharmacist') {
+    primaryNav.splice(
+      1,
+      0,
+      {
+        name: 'Verification Queue',
+        path: '/pharmacist/verification',
+        icon: ClipboardCheck,
+        active: location.pathname.startsWith('/pharmacist/verification'),
+      },
+      {
+        name: 'My History',
+        path: '/pharmacist/history',
+        icon: FileText,
+        active: location.pathname.startsWith('/pharmacist/history'),
+      },
+      {
+        name: 'Expiry Tracker',
+        path: '/pharmacist/expiry',
+        icon: Clock,
+        active: location.pathname.startsWith('/pharmacist/expiry'),
       }
     );
   }
@@ -110,9 +142,8 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
       { name: 'QR Handover Tracking', icon: QrCode, phase: 'Phase 7' },
     ],
     pharmacist: [
-      { name: 'Verification Queue', icon: ClipboardCheck, phase: 'Phase 5' },
-      { name: 'Safety Checklist', icon: ShieldCheck, phase: 'Phase 5' },
-      { name: 'Inspection Records', icon: FileText, phase: 'Phase 5' },
+      { name: 'NGO Allocation & Matching', icon: Building2, phase: 'Phase 6' },
+      { name: 'QR Handover Tracking', icon: QrCode, phase: 'Phase 7' },
     ],
     ngo: [
       { name: 'Browse Available Meds', icon: Building2, phase: 'Phase 6' },

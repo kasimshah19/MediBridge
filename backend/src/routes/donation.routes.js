@@ -16,6 +16,7 @@ import {
   streamItemPhoto,
   submitDonation,
   cancelDonation,
+  respondToMoreInfo,
 } from '../controllers/donation.controller.js';
 import {
   createDonationSchema,
@@ -23,6 +24,7 @@ import {
   submitDonationSchema,
   cancelDonationSchema,
 } from '../validators/donation.validator.js';
+import { donorRespondSchema } from '../validators/verification.validator.js';
 import { ROLES } from '../config/constants.js';
 
 const router = Router();
@@ -82,5 +84,12 @@ router.delete('/:id/items/:itemId/photos/:photoId', deleteItemPhoto);
 // Submission & cancellation
 router.post('/:id/submit', submitLimiter, submitDonation);
 router.post('/:id/cancel', validate(cancelDonationSchema), cancelDonation);
+
+// Clarification response for more_info_required items
+router.post(
+  '/:id/items/:itemId/respond',
+  validate(donorRespondSchema),
+  respondToMoreInfo
+);
 
 export default router;

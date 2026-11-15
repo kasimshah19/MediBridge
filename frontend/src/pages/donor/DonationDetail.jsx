@@ -10,14 +10,19 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  AlertCircle,
   ArrowLeft,
   Ban,
   Eye,
   Camera,
   RotateCcw,
   ShieldAlert,
+  ShieldCheck,
   HelpCircle,
   FileText,
+  UploadCloud,
+  Send,
+  Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Card from '../../components/ui/Card';
@@ -29,9 +34,177 @@ import StatusBadge from '../../components/common/StatusBadge';
 import PriorityChip from '../../components/common/PriorityChip';
 import ExpiryCountdown from '../../components/common/ExpiryCountdown';
 import Lightbox from '../../components/ui/Lightbox';
-import { getDonationById, cancelDonation, getItemPhotoBlob } from '../../api/donation.api';
+import {
+  getDonationById,
+  cancelDonation,
+  getItemPhotoBlob,
+  uploadItemPhoto,
+  respondToClarification,
+} from '../../api/donation.api';
 import '../../utils/leafletSetup';
 import { OSM_ATTRIBUTION } from '../../utils/leafletSetup';
+
+function ItemClarificationForm({ donationId, item, onSubmitted }) {
+  const [message, setMessage] = useState('');
+  const [batchNumber, setBatchNumber] = useState(item.batchNumber || '');
+  const [storageHistory, setStorageHistory] = useState('');
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const requestedTypes = item.verification?.requestedTypes || [];
+  const needsBatch = requestedTypes.includes('batch_number_correction');
+  const needsStorage = requestedTypes.includes('storage_history');
+  const needsPhoto = requestedTypes.some((t) => t.includes('photo'));
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    try {
+      setUploadingPhotos(true);
+      for (const file of files) {
+        await uploadItemPhoto(donationId, item._id, file);
+        toast.success(`Uploaded ${file.name}`);
+      }
+      onSubmitted();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to upload photo.');
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!message.trim() || message.trim().length < 5) {
+      toast.error('Clarification message must be at least 5 characters.');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const payload = {
+        message: message.trim(),
+      };
+      if (batchNumber && batchNumber.trim() && batchNumber !== item.batchNumber) {
+        payload.batchNumber = batchNumber.trim().toUpperCase();
+      }
+      if (storageHistory && storageHistory.trim()) {
+        payload.storageHistory = storageHistory.trim();
+      }
+      await respondToClarification(donationId, item._id, payload);
+      toast.success('Clarification response sent! Item returned to review queue.');
+      onSubmitted();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit response.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-300 space-y-3 mt-3"
+    >
+      <div className="flex items-center gap-2">
+        <HelpCircle size={16} className="text-amber-700" />
+        <h4 className="text-xs font-heading font-bold text-amber-950">
+          Respond to Verifying Pharmacist
+        </h4>
+      </div>
+
+      <div>
+        <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+          Your Response / Clarification <span className="text-rose-500">*</span>
+        </label>
+        <textarea
+          rows={3}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Explain the packaging condition, address the pharmacist's question, or provide details..."
+          maxLength={500}
+          className="w-full text-xs p-2.5 rounded-xl bg-white border border-amber-300 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20"
+          required
+        />
+        <div className="flex justify-between text-[10px] text-amber-800/80 mt-0.5">
+          <span>Minimum 5 characters</span>
+          <span>{message.length} / 500</span>
+        </div>
+      </div>
+
+      {(needsBatch || true) && (
+        <div>
+          <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+            Batch Number {needsBatch && <span className="text-amber-700 font-normal">(correction requested)</span>}
+          </label>
+          <input
+            type="text"
+            value={batchNumber}
+            onChange={(e) => setBatchNumber(e.target.value)}
+            placeholder="e.g. BATCH-9921"
+            className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-amber-300 outline-none focus:border-amber-600 font-mono"
+          />
+        </div>
+      )}
+
+      {(needsStorage || true) && (
+        <div>
+          <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+            Storage Conditions History {needsStorage && <span className="text-amber-700 font-normal">(requested)</span>}
+          </label>
+          <input
+            type="text"
+            value={storageHistory}
+            onChange={(e) => setStorageHistory(e.target.value)}
+            placeholder="e.g. Stored in dry medicine cabinet at room temperature (< 25°C), away from sunlight."
+            maxLength={300}
+            className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-amber-300 outline-none focus:border-amber-600"
+          />
+        </div>
+      )}
+
+      {/* Upload Additional Photos */}
+      <div>
+        <label className="block text-[11px] font-semibold text-amber-900 mb-1">
+          Upload Additional Photos {needsPhoto && <span className="text-amber-700 font-normal">(requested by pharmacist)</span>}
+        </label>
+        <div className="flex items-center gap-3">
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-50 text-xs font-semibold shadow-xs">
+            <UploadCloud size={14} className="text-amber-700" />
+            <span>{uploadingPhotos ? 'Uploading...' : 'Choose Photos to Upload'}</span>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              disabled={uploadingPhotos}
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </label>
+          <span className="text-[10px] text-amber-800/80">JPEG, PNG, WebP (max 5 MB)</span>
+        </div>
+      </div>
+
+      <div className="flex justify-end pt-2">
+        <Button
+          type="submit"
+          variant="primary"
+          size="sm"
+          disabled={submitting || uploadingPhotos || message.trim().length < 5}
+          className="bg-amber-600 hover:bg-amber-700 font-bold text-xs"
+        >
+          {submitting ? (
+            'Submitting...'
+          ) : (
+            <>
+              <Send size={12} className="mr-1.5" />
+              <span>Submit Clarification to Pharmacist</span>
+            </>
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 export default function DonationDetail() {
   const { id } = useParams();
@@ -306,6 +479,117 @@ export default function DonationDetail() {
                       </div>
                     )}
 
+                    {/* Pharmacist Verification Block */}
+                    {item.verification && (
+                      <div
+                        className={`p-3.5 rounded-2xl border text-xs space-y-2 ${
+                          item.verification.latestDecision === 'approved'
+                            ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                            : item.verification.latestDecision === 'rejected'
+                            ? 'bg-rose-50/70 border-rose-200 text-rose-950'
+                            : 'bg-amber-50/80 border-amber-300 text-amber-950'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 font-bold">
+                            {item.verification.latestDecision === 'approved' && (
+                              <>
+                                <CheckCircle2 size={15} className="text-emerald-600" />
+                                <span>Verified & Approved by Pharmacist</span>
+                              </>
+                            )}
+                            {item.verification.latestDecision === 'rejected' && (
+                              <>
+                                <XCircle size={15} className="text-rose-600" />
+                                <span>Verification Rejected: {item.verification.reasonLabel || item.verification.reasonCode}</span>
+                              </>
+                            )}
+                            {item.verification.latestDecision === 'more_info_required' && (
+                              <>
+                                <HelpCircle size={15} className="text-amber-700" />
+                                <span>Clarification Requested (Round {item.verification.round})</span>
+                              </>
+                            )}
+                          </div>
+
+                          <span className="text-[10px] font-semibold opacity-75">
+                            {item.verification.pharmacist?.firstName && (
+                              <span>By Pharm. {item.verification.pharmacist.firstName} • </span>
+                            )}
+                            {new Date(item.verification.decidedAt).toLocaleDateString('en-IN', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
+
+                        {item.verification.reason && (
+                          <p className="text-[11px] leading-relaxed opacity-90 pl-5">
+                            <strong>Notes:</strong> {item.verification.reason}
+                          </p>
+                        )}
+
+                        {item.verification.latestDecision === 'more_info_required' && (
+                          <div className="pl-5 space-y-2">
+                            {item.verification.question && (
+                              <div className="p-2.5 rounded-xl bg-white/80 border border-amber-200 text-[11px]">
+                                <span className="font-bold text-amber-900 block mb-0.5">Pharmacist's Question:</span>
+                                <p className="text-amber-950 font-medium">{item.verification.question}</p>
+                              </div>
+                            )}
+
+                            {item.verification.requestedTypes && item.verification.requestedTypes.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                <span className="text-[10px] uppercase font-bold text-amber-800">Requested Items:</span>
+                                {item.verification.requestedTypes.map((t) => (
+                                  <span
+                                    key={t}
+                                    className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-200/70 text-amber-900 capitalize"
+                                  >
+                                    {t.replace(/_/g, ' ')}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {item.verification.latestDecision === 'rejected' && (
+                          <div className="pl-5 pt-1 space-y-2">
+                            <p className="text-[11px] text-rose-800 leading-relaxed">
+                              This medicine cannot be accepted for distribution under safety guidelines. We recommend safe local pharmaceutical disposal.
+                            </p>
+                            <Link to="/donor/donate">
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                className="border-rose-300 text-rose-700 hover:bg-rose-100/50 text-[11px]"
+                              >
+                                Donate another medicine
+                              </Button>
+                            </Link>
+                          </div>
+                        )}
+
+                        {item.verification.latestDecision === 'approved' && item.verification.checksPassedCount > 0 && (
+                          <div className="pl-5 flex items-center gap-1.5 text-[11px] text-emerald-800 font-medium">
+                            <ShieldCheck size={13} className="text-emerald-600" />
+                            <span>{item.verification.checksPassedCount} of 6 safety points verified passed</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Clarification Response Form if item needs response */}
+                    {item.status === 'more_info_required' && (
+                      <ItemClarificationForm
+                        donationId={donation._id}
+                        item={item}
+                        onSubmitted={fetchDetails}
+                      />
+                    )}
+
                     {/* Photos Gallery */}
                     {item.photos && item.photos.length > 0 && (
                       <div className="pt-2">
@@ -399,6 +683,19 @@ export default function DonationDetail() {
               <Clock size={16} className="text-teal-700" />
               <span>Status History Timeline</span>
             </h3>
+
+            {donation.status === 'more_info_required' && (
+              <div className="mb-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-300 text-xs text-amber-950 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                  <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                  <span>Action Needed</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-amber-900/90">
+                  The verifying pharmacist has asked for clarification on one or more medicines above.
+                  Please review and submit your responses to resume verification.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-4 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
               {donation.statusHistory?.map((entry, idx) => (

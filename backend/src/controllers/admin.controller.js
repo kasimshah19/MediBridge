@@ -1,10 +1,12 @@
 import asyncHandler from '../middleware/asyncHandler.js';
 import Organization from '../models/Organization.js';
 import User from '../models/User.js';
+import Donation from '../models/Donation.js';
 import Notification from '../models/Notification.js';
 import AuditLog from '../models/AuditLog.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import verificationService from '../services/verification.service.js';
 import {
   sendOrgVerifiedEmail,
   sendOrgRejectedEmail,
@@ -17,6 +19,7 @@ import {
   ROLES,
   APPROVAL_STATUS,
   AUDIT_ACTIONS,
+  DONATION_STATUS,
 } from '../config/constants.js';
 
 /**
@@ -372,6 +375,8 @@ export const reviewUser = asyncHandler(async (req, res, next) => {
  * @route GET /api/admin/overview
  */
 export const getOverview = asyncHandler(async (_req, res) => {
+  const now = new Date();
+
   const [
     pendingOrganizations,
     verifiedOrganizations,
@@ -379,6 +384,8 @@ export const getOverview = asyncHandler(async (_req, res) => {
     totalDonors,
     totalUsers,
     recentActivity,
+    donationsAwaitingVerification,
+    oldestDonation,
   ] = await Promise.all([
     Organization.countDocuments({ verificationStatus: ORG_STATUS.PENDING }),
     Organization.countDocuments({ verificationStatus: ORG_STATUS.VERIFIED }),
@@ -389,7 +396,16 @@ export const getOverview = asyncHandler(async (_req, res) => {
       .populate('userId', 'name email role')
       .sort({ createdAt: -1 })
       .limit(10),
+    Donation.countDocuments({ status: DONATION_STATUS.UNDER_VERIFICATION }),
+    Donation.findOne({ status: DONATION_STATUS.UNDER_VERIFICATION })
+      .sort({ submittedAt: 1 })
+      .select('submittedAt'),
   ]);
+
+  const oldestWaitingHours =
+    oldestDonation && oldestDonation.submittedAt
+      ? Math.max(0, Math.floor((now.getTime() - new Date(oldestDonation.submittedAt).getTime()) / 3600000))
+      : 0;
 
   res.status(200).json(
     new ApiResponse(
@@ -401,10 +417,56 @@ export const getOverview = asyncHandler(async (_req, res) => {
         totalDonors,
         totalUsers,
         recentActivity,
+        donationsAwaitingVerification,
+        oldestWaitingHours,
       },
       'Admin overview retrieved successfully.'
     )
   );
+});
+
+/**
+ * Force release a claimed donation.
+ * @route POST /api/admin/verification/donations/:id/force-release
+ */
+export const forceReleaseDonation = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await verificationService.releaseDonation({
+    donationId: id,
+    userId: req.user._id,
+    isAdmin: true,
+    req,
+  });
+
+  res.status(200).json(new ApiResponse(200, result, 'Donation claim force-released by administrator.'));
+});
+
+/**
+ * Filterable verification audit log for admins.
+ * @route GET /api/admin/verification/log
+ */
+export const getVerificationLog = asyncHandler(async (req, res) => {
+  const { decision, pharmacistId, search, from, to, page, limit } = req.query;
+  const result = await verificationService.getAdminVerificationLog({
+    decision,
+    pharmacistId,
+    search,
+    from,
+    to,
+    page,
+    limit,
+  });
+
+  res.status(200).json(new ApiResponse(200, result, 'Verification log retrieved successfully.'));
+});
+
+/**
+ * High-level verification summary and active claims for admins.
+ * @route GET /api/admin/verification/summary
+ */
+export const getVerificationSummary = asyncHandler(async (_req, res) => {
+  const summary = await verificationService.getAdminVerificationSummary();
+  res.status(200).json(new ApiResponse(200, summary, 'Verification summary retrieved successfully.'));
 });
 
 export default {
@@ -414,4 +476,7 @@ export default {
   getUsers,
   reviewUser,
   getOverview,
+  forceReleaseDonation,
+  getVerificationLog,
+  getVerificationSummary,
 };

@@ -38,6 +38,11 @@ const STATUS_CONFIGS = {
     color: 'warning',
     icon: HelpCircle,
   },
+  more_info_requested: {
+    label: 'More Info Requested',
+    color: 'warning',
+    icon: HelpCircle,
+  },
   approved: {
     label: 'Approved',
     color: 'success',

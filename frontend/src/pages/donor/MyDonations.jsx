@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Package,
   Search,
@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertOctagon,
+  AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Card from '../../components/ui/Card';
@@ -26,17 +27,21 @@ import { getMyDonations, deleteDraftDonation } from '../../api/donation.api';
 import { useDebounce } from '../../hooks/useDebounce';
 
 const TABS = [
-  { id: 'all', label: 'All' },
-  { id: 'draft', label: 'Drafts' },
-  { id: 'under_verification', label: 'In Review' },
-  { id: 'approved', label: 'Approved' },
-  { id: 'rejected', label: 'Rejected' },
-  { id: 'cancelled', label: 'Cancelled' },
+  { id: 'all', label: 'All', countKey: 'all' },
+  { id: 'draft', label: 'Drafts', countKey: 'draft' },
+  { id: 'under_verification', label: 'In Review', countKey: 'under_verification' },
+  { id: 'more_info_required', label: 'Needs Response', countKey: 'needsResponse' },
+  { id: 'approved', label: 'Approved', countKey: 'approved' },
+  { id: 'rejected', label: 'Rejected', countKey: 'rejected' },
+  { id: 'cancelled', label: 'Cancelled', countKey: 'cancelled' },
 ];
 
 export default function MyDonations() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || searchParams.get('status') || 'all';
+
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
 
@@ -111,14 +116,33 @@ export default function MyDonations() {
         </Link>
       </div>
 
+      {/* Action Needed Banner: More Info Requested */}
+      {counts.needsResponse > 0 && activeTab !== 'more_info_required' && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-between gap-3 text-xs shadow-soft">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle size={18} className="text-amber-600 shrink-0" />
+            <span className="text-amber-950 font-medium">
+              You have <strong className="font-bold">{counts.needsResponse} donation(s)</strong> awaiting clarification or photos requested by a pharmacist.
+            </span>
+          </div>
+          <button
+            onClick={() => setActiveTab('more_info_required')}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition-colors shadow-xs"
+          >
+            Review Needs Response
+          </button>
+        </div>
+      )}
+
       {/* Tabs & Search Filter */}
       <Card className="p-4 bg-white border border-slate-100 shadow-soft space-y-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Status Tabs with count badges */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
             {TABS.map((tab) => {
-              const count = counts[tab.id] ?? 0;
+              const count = tab.countKey ? counts[tab.countKey] ?? 0 : counts[tab.id] ?? 0;
               const isActive = activeTab === tab.id;
+              const isNeedsResponseAlert = tab.id === 'more_info_required' && count > 0;
               return (
                 <button
                   key={tab.id}
@@ -126,13 +150,19 @@ export default function MyDonations() {
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                     isActive
                       ? 'bg-teal-700 text-white shadow-sm'
+                      : isNeedsResponseAlert
+                      ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
                       : 'bg-slate-50 text-text-body hover:bg-slate-100'
                   }`}
                 >
                   <span>{tab.label}</span>
                   <span
                     className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200/70 text-slate-700'
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : isNeedsResponseAlert
+                        ? 'bg-amber-500 text-white font-bold animate-pulse'
+                        : 'bg-slate-200/70 text-slate-700'
                     }`}
                   >
                     {count}

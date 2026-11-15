@@ -30,6 +30,7 @@ const envSchema = z.object({
     .string()
     .default('false')
     .transform((val) => val === 'true'),
+  VERIFICATION_CLAIM_TTL_MINUTES: z.string().default('60').transform(Number),
 
   // Admin Seeding credentials
   ADMIN_NAME: z.string().default('System Administrator'),

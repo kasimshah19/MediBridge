@@ -8,6 +8,10 @@ import {
   AlertTriangle,
   AlertCircle,
   XCircle,
+  CheckCircle2,
+  HelpCircle,
+  ShieldCheck,
+  RotateCcw,
 } from 'lucide-react';
 import {
   getNotifications,
@@ -167,9 +171,21 @@ export default function NotificationsBell() {
                   }`}
                 >
                   <div className="mt-0.5 flex-shrink-0">
-                    {notif.type === 'expiry_expired' ? (
-                      <span className="p-1 rounded-md bg-slate-100 text-slate-700 block">
+                    {notif.type === 'expiry_expired' || notif.type === 'verification_rejected' ? (
+                      <span className="p-1 rounded-md bg-rose-100 text-rose-700 block">
                         <XCircle size={13} />
+                      </span>
+                    ) : notif.type === 'verification_approved' ? (
+                      <span className="p-1 rounded-md bg-emerald-100 text-emerald-700 block">
+                        <CheckCircle2 size={13} />
+                      </span>
+                    ) : notif.type === 'verification_more_info' ? (
+                      <span className="p-1 rounded-md bg-amber-100 text-amber-700 block">
+                        <HelpCircle size={13} />
+                      </span>
+                    ) : notif.type === 'verification_claim_expired' || notif.type === 'verification_reassigned' ? (
+                      <span className="p-1 rounded-md bg-sky-100 text-sky-700 block">
+                        <RotateCcw size={13} />
                       </span>
                     ) : notif.type === 'expiry_critical' ? (
                       <span className="p-1 rounded-md bg-rose-100 text-rose-600 block">

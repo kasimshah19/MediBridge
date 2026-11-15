@@ -6,6 +6,9 @@ import {
   getUsers,
   reviewUser,
   getOverview,
+  forceReleaseDonation,
+  getVerificationLog,
+  getVerificationSummary,
 } from '../controllers/admin.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -34,5 +37,10 @@ router.patch('/users/:id/review', validate(reviewUserSchema), reviewUser);
 // Expiry scheduled job management
 router.get('/jobs/expiry', getAdminJobRuns);
 router.post('/jobs/expiry/run', validate(runJobSchema), runAdminExpiryCheck);
+
+// Verification monitoring & claim force-release
+router.get('/verification/summary', getVerificationSummary);
+router.get('/verification/log', getVerificationLog);
+router.post('/verification/donations/:id/force-release', forceReleaseDonation);
 
 export default router;

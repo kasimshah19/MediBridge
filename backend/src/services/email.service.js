@@ -301,6 +301,112 @@ export const sendExpiryAlertEmail = async ({ to, name, count, type }) => {
   });
 };
 
+/**
+ * Send verification decision notification email to donor.
+ */
+export const sendVerificationDecisionEmail = async ({
+  to,
+  name,
+  donationCode,
+  donationId,
+  approvedCount = 0,
+  rejectedCount = 0,
+}) => {
+  const donationUrl = `${env.CLIENT_URL}/donor/donations/${donationId}`;
+  const subject = `MediBridge - Verification Results for Donation ${donationCode}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #F0FDFA; margin: 0; padding: 24px; color: #1E293B; }
+          .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #CCFBF1; padding: 32px; }
+          .logo { font-size: 20px; font-weight: bold; color: #0D9488; margin-bottom: 20px; }
+          .stats { display: flex; gap: 12px; margin: 20px 0; }
+          .stat-box { flex: 1; padding: 12px; border-radius: 8px; text-align: center; }
+          .stat-approved { background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; }
+          .stat-rejected { background: #FFF1F2; border: 1px solid #FECDD3; color: #9F1239; }
+          .btn { display: inline-block; background: #0D9488; color: #ffffff !important; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="logo">🏥 MediBridge Verification Update</div>
+          <h2>Pharmacist Review Complete</h2>
+          <p>Hello ${name || 'Donor'},</p>
+          <p>A licensed pharmacist has completed the medical verification for donation <strong>${donationCode}</strong>.</p>
+          <div style="margin: 20px 0;">
+            <p><strong>Approved medicines:</strong> ${approvedCount}</p>
+            <p><strong>Rejected medicines:</strong> ${rejectedCount}</p>
+          </div>
+          <p>Click below to inspect the details, reasons, and next steps:</p>
+          <a href="${donationUrl}" class="btn" target="_blank">View Donation Status</a>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendMailSafe({
+    to,
+    subject,
+    html,
+    devLogSummary: `Verification complete email sent to ${to} (${donationCode}): ${approvedCount} approved, ${rejectedCount} rejected.`,
+  });
+};
+
+/**
+ * Send notification when pharmacist requests clarification on a medicine item.
+ */
+export const sendVerificationMoreInfoEmail = async ({
+  to,
+  name,
+  donationCode,
+  donationId,
+  medicineName,
+  question,
+}) => {
+  const donationUrl = `${env.CLIENT_URL}/donor/donations/${donationId}`;
+  const subject = `MediBridge - Clarification Requested for ${medicineName} (${donationCode})`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #FFFBEB; margin: 0; padding: 24px; color: #1E293B; }
+          .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #FDE68A; padding: 32px; }
+          .badge { display: inline-block; background: #FEF3C7; color: #92400E; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; margin-bottom: 16px; }
+          .question-box { background: #FEF3C7; border-left: 4px solid #D97706; padding: 14px; border-radius: 4px; margin: 16px 0; color: #78350F; font-size: 14px; }
+          .btn { display: inline-block; background: #D97706; color: #ffffff !important; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="badge">ACTION REQUIRED</div>
+          <h2>Pharmacist Clarification Needed</h2>
+          <p>Hello ${name || 'Donor'},</p>
+          <p>During the verification of <strong>${medicineName}</strong> in donation <strong>${donationCode}</strong>, the reviewing pharmacist requested additional information:</p>
+          <div class="question-box">
+            "${question}"
+          </div>
+          <p>Please log in to your dashboard to answer the question or provide clearer photos.</p>
+          <a href="${donationUrl}" class="btn" target="_blank">Respond to Pharmacist</a>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendMailSafe({
+    to,
+    subject,
+    html,
+    devLogSummary: `Clarification request email sent to ${to} for ${medicineName}: ${question}`,
+  });
+};
+
 export default {
   sendPasswordResetEmail,
   sendOrgVerifiedEmail,
@@ -308,4 +414,6 @@ export default {
   sendUserApprovedEmail,
   sendUserRejectedEmail,
   sendExpiryAlertEmail,
+  sendVerificationDecisionEmail,
+  sendVerificationMoreInfoEmail,
 };

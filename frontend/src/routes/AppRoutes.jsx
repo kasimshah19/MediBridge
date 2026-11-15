@@ -28,12 +28,17 @@ import MyDonations from '../pages/donor/MyDonations';
 import DonationDetail from '../pages/donor/DonationDetail';
 import DonorExpiry from '../pages/donor/DonorExpiry';
 import PharmacistDashboard from '../pages/pharmacist/PharmacistDashboard';
+import VerificationQueue from '../pages/pharmacist/VerificationQueue';
+import VerificationDetail from '../pages/pharmacist/VerificationDetail';
+import PharmacistHistory from '../pages/pharmacist/PharmacistHistory';
+import PharmacistExpiry from '../pages/pharmacist/PharmacistExpiry';
 import NgoDashboard from '../pages/ngo/NgoDashboard';
 import NgoOnboarding from '../pages/ngo/NgoOnboarding';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminOrganizations from '../pages/admin/AdminOrganizations';
 import AdminPharmacists from '../pages/admin/AdminPharmacists';
 import AdminExpiry from '../pages/admin/AdminExpiry';
+import AdminVerification from '../pages/admin/AdminVerification';
 
 export default function AppRoutes() {
   return (
@@ -76,6 +81,10 @@ export default function AppRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={['pharmacist', 'admin']} />}>
             <Route path="/pharmacist/dashboard" element={<PharmacistDashboard />} />
+            <Route path="/pharmacist/verification" element={<VerificationQueue />} />
+            <Route path="/pharmacist/verification/:donationId" element={<VerificationDetail />} />
+            <Route path="/pharmacist/history" element={<PharmacistHistory />} />
+            <Route path="/pharmacist/expiry" element={<PharmacistExpiry />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['ngo', 'admin']} />}>
@@ -87,6 +96,7 @@ export default function AppRoutes() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/organizations" element={<AdminOrganizations />} />
             <Route path="/admin/pharmacists" element={<AdminPharmacists />} />
+            <Route path="/admin/verification" element={<AdminVerification />} />
             <Route path="/admin/expiry" element={<AdminExpiry />} />
           </Route>
         </Route>

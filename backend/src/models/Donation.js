@@ -110,6 +110,21 @@ const donationSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    review: {
+      claimedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+      },
+      claimedAt: {
+        type: Date,
+        default: null,
+      },
+      claimExpiresAt: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,
@@ -117,6 +132,7 @@ const donationSchema = new mongoose.Schema(
 );
 
 donationSchema.index({ location: '2dsphere' });
+donationSchema.index({ status: 1, submittedAt: 1 });
 
 const Donation = mongoose.models.Donation || mongoose.model('Donation', donationSchema);
 

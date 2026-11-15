@@ -185,6 +185,40 @@ const medicineSchema = new mongoose.Schema(
       enum: [...REJECTION_SOURCES_ARRAY, null],
       default: null,
     },
+    rejectionReasonText: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    version: {
+      type: Number,
+      default: 0,
+    },
+    verificationState: {
+      latestVerificationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Verification',
+        default: null,
+      },
+      round: {
+        type: Number,
+        default: 0,
+      },
+      moreInfo: {
+        question: { type: String, default: null },
+        requestedTypes: [{ type: String }],
+        requestedAt: { type: Date, default: null },
+        requestedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          default: null,
+        },
+        donorResponse: {
+          message: { type: String, default: null },
+          respondedAt: { type: Date, default: null },
+        },
+      },
+    },
     qrCode: {
       type: String,
       default: null,
