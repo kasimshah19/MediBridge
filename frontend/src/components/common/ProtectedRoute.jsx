@@ -24,14 +24,18 @@ export default function ProtectedRoute({ allowedRoles = [] }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Pharmacist or NGO account pending/rejected approval
-  const isSpecialRole = user.role === 'pharmacist' || user.role === 'ngo';
-  const isNotApproved = user.approvalStatus !== 'approved';
-  const isAllowedPathWhenPending =
-    location.pathname === '/approval-pending' || location.pathname === '/profile';
+  // NGO approval flow routes to /ngo/onboarding
+  if (user.role === 'ngo' && user.approvalStatus !== 'approved') {
+    if (location.pathname !== '/ngo/onboarding' && location.pathname !== '/profile') {
+      return <Navigate to="/ngo/onboarding" replace />;
+    }
+  }
 
-  if (isSpecialRole && isNotApproved && !isAllowedPathWhenPending) {
-    return <Navigate to="/approval-pending" replace />;
+  // Pharmacist approval flow routes to /approval-pending
+  if (user.role === 'pharmacist' && user.approvalStatus !== 'approved') {
+    if (location.pathname !== '/approval-pending' && location.pathname !== '/profile') {
+      return <Navigate to="/approval-pending" replace />;
+    }
   }
 
   // Role unauthorized

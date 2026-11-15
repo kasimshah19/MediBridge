@@ -14,6 +14,7 @@ import {
   FileText,
   Activity,
   LogOut,
+  Stethoscope,
 } from 'lucide-react';
 import { useAuth, getDashboardPathForUser } from '../../context/AuthContext';
 import Logo from '../common/Logo';
@@ -43,6 +44,34 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
     },
   ];
 
+  // Admin active navigation for Phase 2
+  if (user.role === 'admin') {
+    primaryNav.push(
+      {
+        name: 'Organizations',
+        path: '/admin/organizations',
+        icon: Building2,
+        active: location.pathname.startsWith('/admin/organizations'),
+      },
+      {
+        name: 'Pharmacists',
+        path: '/admin/pharmacists',
+        icon: Stethoscope,
+        active: location.pathname.startsWith('/admin/pharmacists'),
+      }
+    );
+  }
+
+  // NGO active navigation
+  if (user.role === 'ngo') {
+    primaryNav.push({
+      name: 'Organization Profile',
+      path: '/ngo/onboarding',
+      icon: Building2,
+      active: location.pathname === '/ngo/onboarding',
+    });
+  }
+
   // Role-specific roadmap features (planned for subsequent phases)
   const roleUpcoming = {
     donor: [
@@ -61,7 +90,6 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
       { name: 'QR Handover Log', icon: QrCode, phase: 'Phase 7' },
     ],
     admin: [
-      { name: 'Account Approvals', icon: Users, phase: 'Phase 2' },
       { name: 'Platform Oversight', icon: Activity, phase: 'Phase 8' },
       { name: 'Audit & Compliance', icon: FileText, phase: 'Phase 8' },
     ],
@@ -116,35 +144,37 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
           </div>
 
           {/* Upcoming Features (Planned for Later Phases) */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between px-3 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                {user.role.toUpperCase()} Workspace
-              </span>
-              <span className="text-[9px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded">
-                Roadmap
-              </span>
-            </div>
+          {upcomingItems.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between px-3 mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                  {user.role.toUpperCase()} Workspace
+                </span>
+                <span className="text-[9px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded">
+                  Roadmap
+                </span>
+              </div>
 
-            {upcomingItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.name}
-                  className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs text-slate-400 select-none cursor-not-allowed group hover:bg-slate-50"
-                  title={`${item.name} will be unlocked in ${item.phase}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon size={16} className="text-slate-300 group-hover:text-slate-400" />
-                    <span>{item.name}</span>
+              {upcomingItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.name}
+                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs text-slate-400 select-none cursor-not-allowed group hover:bg-slate-50"
+                    title={`${item.name} will be unlocked in ${item.phase}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon size={16} className="text-slate-300 group-hover:text-slate-400" />
+                      <span>{item.name}</span>
+                    </div>
+                    <span className="text-[9px] font-semibold text-slate-400 border border-slate-200 rounded px-1.5 py-0.2">
+                      {item.phase}
+                    </span>
                   </div>
-                  <span className="text-[9px] font-semibold text-slate-400 border border-slate-200 rounded px-1.5 py-0.2">
-                    {item.phase}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Footer Area: User Card & Logout */}

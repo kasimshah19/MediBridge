@@ -1,26 +1,33 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, ArrowRight, User, LayoutDashboard, LogOut, ChevronDown } from 'lucide-react';
 import Logo from '../common/Logo';
 import Button from '../ui/Button';
 import { useAuth, getDashboardPathForUser } from '../../context/AuthContext';
+import { cn } from '../../utils/cn';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const location = useLocation();
 
   const navLinks = [
-    { name: 'Home', href: '/' },
-    { name: 'How it works', href: '/#how-it-works' },
-    { name: 'For NGOs', href: '/#for-ngos' },
-    { name: 'About', href: '/#about' },
+    { name: 'Home', path: '/' },
+    { name: 'How it works', path: '/#how-it-works' },
+    { name: 'For NGOs', path: '/for-ngos' },
+    { name: 'About', path: '/about' },
   ];
 
   const dashboardPath = getDashboardPathForUser(user);
 
+  const isActive = (path) => {
+    if (path.startsWith('/#')) return false;
+    return location.pathname === path;
+  };
+
   return (
-    <header className="sticky top-0 z-40 w-full glass">
+    <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-teal-900/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
@@ -33,15 +40,20 @@ export default function Navbar() {
             {navLinks.map((item) => (
               <a
                 key={item.name}
-                href={item.href}
-                className="text-sm font-semibold text-text-body hover:text-primary-600 transition-colors"
+                href={item.path}
+                className={cn(
+                  'text-sm font-semibold transition-colors duration-200',
+                  isActive(item.path)
+                    ? 'text-teal-700 font-bold'
+                    : 'text-text-body hover:text-teal-600'
+                )}
               >
                 {item.name}
               </a>
             ))}
           </nav>
 
-          {/* Desktop User Section (Logged Out vs Logged In) */}
+          {/* Desktop User Section */}
           <div className="hidden md:flex items-center gap-3">
             {!user ? (
               <>
@@ -136,9 +148,9 @@ export default function Navbar() {
             {navLinks.map((item) => (
               <a
                 key={item.name}
-                href={item.href}
+                href={item.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-sm font-semibold text-text-body hover:text-primary-600"
+                className="block py-2 text-sm font-semibold text-text-body hover:text-teal-600"
               >
                 {item.name}
               </a>

@@ -24,5 +24,6 @@ const validate = (schema, source = 'body') => (req, _res, next) => {
   next();
 };
 
+export { validate };
 export default validate;
 

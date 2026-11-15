@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { Menu, User, LogOut, ShieldCheck, ChevronDown } from 'lucide-react';
 import Sidebar from '../components/layout/Sidebar';
+import NotificationsBell from '../components/common/NotificationsBell';
 import { useAuth } from '../context/AuthContext';
 import Badge from '../components/ui/Badge';
 
@@ -41,8 +42,12 @@ export default function DashboardLayout() {
             </div>
           </div>
 
-          {/* User Profile Dropdown Menu */}
-          <div className="relative">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Notification Bell */}
+            <NotificationsBell />
+
+            {/* User Profile Dropdown Menu */}
+            <div className="relative">
             <button
               onClick={() => setUserDropdownOpen(!userDropdownOpen)}
               className="flex items-center gap-2.5 p-1.5 pl-3 rounded-full hover:bg-slate-100/80 transition-colors border border-transparent hover:border-slate-200"
@@ -90,6 +95,7 @@ export default function DashboardLayout() {
                 </div>
               </>
             )}
+          </div>
           </div>
         </header>
 

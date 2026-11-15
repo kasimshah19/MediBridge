@@ -45,8 +45,7 @@ app.use(mongoSanitize());
 // Rate limiting
 app.use('/api', apiLimiter);
 
-// Serve uploaded files statically
-app.use('/uploads', express.static('uploads'));
+// Note: Uploaded files are served exclusively through authenticated streaming endpoints (e.g. /api/organizations/:id/documents/:docId/file)
 
 // Ensure database is connected before handling data queries (skip for health check & test env)
 app.use((req, _res, next) => {

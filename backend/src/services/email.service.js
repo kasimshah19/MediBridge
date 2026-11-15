@@ -16,18 +16,37 @@ if (env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS) {
   });
 }
 
+const sendMailSafe = async ({ to, subject, html, devLogSummary }) => {
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: env.EMAIL_FROM,
+        to,
+        subject,
+        html,
+      });
+      return true;
+    } catch (err) {
+      console.error(`❌ Failed to send email to ${to} via SMTP:`, err.message);
+    }
+  }
+
+  if (env.NODE_ENV === 'development') {
+    console.log('\n======================================================');
+    console.log(`📧 [DEV EMAIL] ${subject}`);
+    console.log(`Recipient: ${to}`);
+    if (devLogSummary) console.log(devLogSummary);
+    console.log('======================================================\n');
+  }
+
+  return true;
+};
+
 /**
  * Send password reset email with formatted HTML template and token link.
- * Falls back to printing link in development console if SMTP is not configured.
- *
- * @param {object} params
- * @param {string} params.to - Recipient email
- * @param {string} params.name - User name
- * @param {string} params.resetToken - Unhashed reset token
  */
 export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
   const resetUrl = `${env.CLIENT_URL}/reset-password/${resetToken}`;
-
   const html = `
     <!DOCTYPE html>
     <html>
@@ -61,32 +80,183 @@ export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
     </html>
   `;
 
-  if (transporter) {
-    try {
-      await transporter.sendMail({
-        from: env.EMAIL_FROM,
-        to,
-        subject: 'MediBridge - Password Reset Request',
-        html,
-      });
-      return true;
-    } catch (err) {
-      console.error('❌ Failed to send reset email via SMTP:', err.message);
-    }
-  }
+  return sendMailSafe({
+    to,
+    subject: 'MediBridge - Password Reset Request',
+    html,
+    devLogSummary: `🔗 Reset URL: ${resetUrl}`,
+  });
+};
 
-  // Fallback for development: print link to console
-  if (env.NODE_ENV === 'development') {
-    console.log('\n======================================================');
-    console.log('📧 [DEV EMAIL] Password Reset Link for:', to);
-    console.log('🔗 Reset URL:', resetUrl);
-    console.log('⏳ Expires in 15 minutes');
-    console.log('======================================================\n');
-  }
+/**
+ * Send notification when an organization has been verified.
+ */
+export const sendOrgVerifiedEmail = async ({ to, name, orgName }) => {
+  const dashboardUrl = `${env.CLIENT_URL}/ngo/dashboard`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #F0FDFA; margin: 0; padding: 24px; color: #1E293B; }
+          .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #CCFBF1; padding: 32px; box-shadow: 0 4px 20px rgba(13, 148, 136, 0.08); }
+          .logo { font-size: 22px; font-weight: bold; color: #0D9488; margin-bottom: 24px; }
+          .badge { display: inline-block; background: #ECFDF5; color: #047857; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 12px; margin-bottom: 16px; border: 1px solid #A7F3D0; }
+          h2 { color: #134E4A; margin-top: 0; font-size: 20px; }
+          p { font-size: 14px; line-height: 1.6; color: #475569; margin: 14px 0; }
+          .btn { display: inline-block; background: linear-gradient(135deg, #0D9488, #0EA5E9); color: #ffffff !important; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="logo">🏥 MediBridge</div>
+          <div class="badge">✓ Verification Approved</div>
+          <h2>Congratulations, ${name || 'Partner'}!</h2>
+          <p>Your organization <strong>${orgName}</strong> has been officially verified on the MediBridge platform.</p>
+          <p>You can now request medicines, match with verified donations within your service radius, and manage redistributions securely.</p>
+          <div style="text-align: center;">
+            <a href="${dashboardUrl}" class="btn" target="_blank">Access NGO Dashboard</a>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
 
-  return true;
+  return sendMailSafe({
+    to,
+    subject: `MediBridge - Organization Verified (${orgName})`,
+    html,
+    devLogSummary: `Organization ${orgName} approved. Login URL: ${dashboardUrl}`,
+  });
+};
+
+/**
+ * Send notification when an organization verification is rejected.
+ */
+export const sendOrgRejectedEmail = async ({ to, name, orgName, note }) => {
+  const onboardingUrl = `${env.CLIENT_URL}/ngo/onboarding`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #FFF1F2; margin: 0; padding: 24px; color: #1E293B; }
+          .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #FFE4E6; padding: 32px; box-shadow: 0 4px 20px rgba(225, 29, 72, 0.08); }
+          .logo { font-size: 22px; font-weight: bold; color: #E11D48; margin-bottom: 24px; }
+          .reason-box { background: #FFF1F2; border: 1px solid #FECDD3; border-radius: 10px; padding: 16px; margin: 16px 0; font-size: 13px; color: #9F1239; line-height: 1.5; }
+          .btn { display: inline-block; background: #E11D48; color: #ffffff !important; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="logo">🏥 MediBridge</div>
+          <h2>Verification Update for ${orgName}</h2>
+          <p>Hello ${name || 'Partner'},</p>
+          <p>Thank you for submitting your organization documents. During the administrative review, our compliance team noted that further adjustments or documentation are required before approval:</p>
+          <div class="reason-box">
+            <strong>Administrator Note:</strong><br />
+            ${note || 'Please review your uploaded documents and details.'}
+          </div>
+          <p>You can review the feedback, update your information, and resubmit directly through your portal:</p>
+          <div style="text-align: center;">
+            <a href="${onboardingUrl}" class="btn" target="_blank">Edit & Resubmit Application</a>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendMailSafe({
+    to,
+    subject: `MediBridge - Action Required: Organization Verification (${orgName})`,
+    html,
+    devLogSummary: `Organization ${orgName} rejected. Reason: ${note}`,
+  });
+};
+
+/**
+ * Send notification when a pharmacist applicant is approved.
+ */
+export const sendUserApprovedEmail = async ({ to, name, role }) => {
+  const dashboardUrl = `${env.CLIENT_URL}/${role}/dashboard`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #F0FDFA; margin: 0; padding: 24px; color: #1E293B; }
+          .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #CCFBF1; padding: 32px; box-shadow: 0 4px 20px rgba(13, 148, 136, 0.08); }
+          .logo { font-size: 22px; font-weight: bold; color: #0D9488; margin-bottom: 24px; }
+          .btn { display: inline-block; background: linear-gradient(135deg, #0D9488, #0EA5E9); color: #ffffff !important; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="logo">🏥 MediBridge</div>
+          <h2>Welcome to MediBridge, ${name}!</h2>
+          <p>Your license credentials have been reviewed and approved by the system administration.</p>
+          <p>Your account is now fully active with complete verification privileges.</p>
+          <div style="text-align: center;">
+            <a href="${dashboardUrl}" class="btn" target="_blank">Open Workspace</a>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendMailSafe({
+    to,
+    subject: `MediBridge - Account Approved`,
+    html,
+    devLogSummary: `User ${name} (${role}) approved.`,
+  });
+};
+
+/**
+ * Send notification when a user application is rejected.
+ */
+export const sendUserRejectedEmail = async ({ to, name, role, note }) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #FFF1F2; margin: 0; padding: 24px; color: #1E293B; }
+          .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #FFE4E6; padding: 32px; }
+          .reason-box { background: #FFF1F2; border: 1px solid #FECDD3; border-radius: 10px; padding: 16px; margin: 16px 0; font-size: 13px; color: #9F1239; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h2>Application Status Update</h2>
+          <p>Hello ${name},</p>
+          <p>Your registration as a ${role} was reviewed by administration:</p>
+          <div class="reason-box">
+            <strong>Administrator Note:</strong><br />
+            ${note || 'Credentials could not be verified.'}
+          </div>
+          <p>If you have questions, please reach out to MediBridge support.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendMailSafe({
+    to,
+    subject: `MediBridge - Application Status Update`,
+    html,
+    devLogSummary: `User ${name} rejected. Reason: ${note}`,
+  });
 };
 
 export default {
   sendPasswordResetEmail,
+  sendOrgVerifiedEmail,
+  sendOrgRejectedEmail,
+  sendUserApprovedEmail,
+  sendUserRejectedEmail,
 };

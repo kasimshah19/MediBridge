@@ -182,13 +182,62 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 | ----- | --------------------------------- | ------------- |
 | 0     | ✅ Setup & Foundation             | **Complete**  |
 | 1     | ✅ Auth & Roles                   | **Complete**  |
-| 2     | Landing Page & Org Onboarding     | Planned       |
+| 2     | ✅ Landing Page & Org Onboarding  | **Complete**  |
 | 3     | Donation Submission               | Planned       |
 | 4     | Expiry Tracker                    | Planned       |
 | 5     | Pharmacist Verification           | Planned       |
 | 6     | Geo Matching & Requests           | Planned       |
 | 7     | QR & Chain of Custody             | Planned       |
 | 8     | Admin Analytics, Security & Deploy | Planned      |
+
+---
+
+## 📡 API Endpoints (Phases 1 & 2)
+
+### Auth (`/api/auth`)
+- `POST /register` — Register donor, pharmacist, or NGO account
+- `POST /login` — Authenticate and receive JWT cookie & bearer token
+- `POST /logout` — Invalidate session and clear cookie
+- `GET /me` — Current authenticated user profile
+- `PATCH /me` — Update user profile details
+- `POST /forgot-password` — Initiate password reset token
+- `POST /reset-password/:token` — Reset password with token
+
+### Organizations (`/api/organizations` — Role: `ngo`)
+- `POST /` — Create organization draft (single organization per NGO user)
+- `GET /me` — Fetch own organization details with documents metadata and review history
+- `PATCH /me` — Edit draft or rejected organization details
+- `POST /me/documents` — Upload verification document (validated magic bytes, max 5MB, JPG/PNG/PDF)
+- `DELETE /me/documents/:docId` — Delete uploaded document
+- `GET /:orgId/documents/:docId/file` — Authenticated streaming for owner NGO or Admin (`nosniff`)
+- `POST /me/submit` — Submit organization for administrative review
+
+### Admin (`/api/admin` — Role: `admin`)
+- `GET /overview` — Real dashboard metrics (pending/verified orgs, pending pharmacists, donors, users)
+- `GET /organizations` — Paginated organization list with live status counts & search
+- `GET /organizations/:id` — Full organization details with documents and review history
+- `PATCH /organizations/:id/review` — Verify or reject organization (min 10 char note on reject)
+- `GET /users` — Paginated user verification queue (pharmacists)
+- `PATCH /users/:id/review` — Approve or reject pharmacist applicant
+
+### Notifications (`/api/notifications` — All authenticated users)
+- `GET /` — Fetch recent notifications and unread count
+- `PATCH /:id/read` — Mark notification as read
+- `PATCH /read-all` — Mark all notifications as read
+
+### Geocoding Proxy (`/api/geocode` — All authenticated users)
+- `GET /search?q=` — OSM Nominatim geocoding proxy with 1 req/sec throttle & 10m cache
+- `GET /reverse?lat=&lng=` — OSM Nominatim reverse geocoding proxy
+
+### Public (`/api/public` — Open access)
+- `GET /stats` — Real platform statistics (verified orgs, registered donors, verified pharmacists, cities)
+- `GET /organizations` — Directory of verified organizations with sanitized public fields
+
+---
+
+## 💾 Storage Architecture Note
+
+Local disk storage (`uploads/org-docs/<orgId>/`) is used in Phase 2 wrapped strictly via `src/services/storage.service.js`. Uploaded documents are never served statically via `express.static` and require authenticated role-based access checks. Because ephemeral serverless/container hosts wipe local storage upon sleep or redeployment, Phase 8 will transition to free cloud object storage (e.g. Cloudinary) directly inside `storage.service.js` with zero modifications to business controllers.
 
 ---
 

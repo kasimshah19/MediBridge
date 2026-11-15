@@ -8,11 +8,13 @@ const AuthContext = createContext(null);
 export const getDashboardPathForUser = (user) => {
   if (!user) return '/login';
 
-  // Pharmacist & NGO require admin verification
-  if (
-    (user.role === 'pharmacist' || user.role === 'ngo') &&
-    user.approvalStatus !== 'approved'
-  ) {
+  // NGO follows organization onboarding flow
+  if (user.role === 'ngo') {
+    return user.approvalStatus === 'approved' ? '/ngo/dashboard' : '/ngo/onboarding';
+  }
+
+  // Pharmacist requires admin verification
+  if (user.role === 'pharmacist' && user.approvalStatus !== 'approved') {
     return '/approval-pending';
   }
 
@@ -21,8 +23,6 @@ export const getDashboardPathForUser = (user) => {
       return '/admin/dashboard';
     case 'pharmacist':
       return '/pharmacist/dashboard';
-    case 'ngo':
-      return '/ngo/dashboard';
     case 'donor':
     default:
       return '/donor/dashboard';

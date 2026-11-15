@@ -6,6 +6,10 @@ import PublicOnlyRoute from '../components/common/PublicOnlyRoute';
 
 // Public pages
 import Home from '../pages/public/Home';
+import ForNgos from '../pages/public/ForNgos';
+import About from '../pages/public/About';
+import Terms from '../pages/public/Terms';
+import Privacy from '../pages/public/Privacy';
 import NotFound from '../pages/public/NotFound';
 import Unauthorized from '../pages/public/Unauthorized';
 
@@ -21,7 +25,10 @@ import Profile from '../pages/user/Profile';
 import DonorDashboard from '../pages/donor/DonorDashboard';
 import PharmacistDashboard from '../pages/pharmacist/PharmacistDashboard';
 import NgoDashboard from '../pages/ngo/NgoDashboard';
+import NgoOnboarding from '../pages/ngo/NgoOnboarding';
 import AdminDashboard from '../pages/admin/AdminDashboard';
+import AdminOrganizations from '../pages/admin/AdminOrganizations';
+import AdminPharmacists from '../pages/admin/AdminPharmacists';
 
 export default function AppRoutes() {
   return (
@@ -29,6 +36,10 @@ export default function AppRoutes() {
       {/* 1. Public Layout Routes */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/for-ngos" element={<ForNgos />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
       </Route>
 
@@ -59,10 +70,13 @@ export default function AppRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={['ngo', 'admin']} />}>
             <Route path="/ngo/dashboard" element={<NgoDashboard />} />
+            <Route path="/ngo/onboarding" element={<NgoOnboarding />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/organizations" element={<AdminOrganizations />} />
+            <Route path="/admin/pharmacists" element={<AdminPharmacists />} />
           </Route>
         </Route>
       </Route>

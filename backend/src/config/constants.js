@@ -41,12 +41,36 @@ export const ORG_TYPE = {
 export const ORG_TYPE_ARRAY = Object.values(ORG_TYPE);
 
 export const ORG_STATUS = {
+  DRAFT: 'draft',
   PENDING: 'pending',
   VERIFIED: 'verified',
   REJECTED: 'rejected',
 };
 
 export const ORG_STATUS_ARRAY = Object.values(ORG_STATUS);
+
+// Organization document types
+export const ORG_DOC_TYPES = {
+  REGISTRATION_CERTIFICATE: 'registration_certificate',
+  ID_PROOF: 'id_proof',
+  TAX_EXEMPTION_12A_80G: 'tax_exemption_12a_80g',
+  CLINIC_LICENSE: 'clinic_license',
+  OTHER: 'other',
+};
+
+export const ORG_DOC_TYPES_ARRAY = Object.values(ORG_DOC_TYPES);
+
+// Organization services offered
+export const ORG_SERVICES = {
+  GENERAL_MEDICINE: 'general_medicine',
+  PEDIATRICS: 'pediatrics',
+  CHRONIC_CARE: 'chronic_care',
+  ELDERLY_CARE: 'elderly_care',
+  MATERNAL_HEALTH: 'maternal_health',
+  OTHER: 'other',
+};
+
+export const ORG_SERVICES_ARRAY = Object.values(ORG_SERVICES);
 
 // Donation statuses
 export const DONATION_STATUS = {
@@ -147,6 +171,15 @@ export const AUDIT_ACTIONS = {
   PASSWORD_RESET_DONE: 'PASSWORD_RESET_DONE',
   PASSWORD_CHANGED: 'PASSWORD_CHANGED',
   PROFILE_UPDATED: 'PROFILE_UPDATED',
+  ORG_CREATED: 'ORG_CREATED',
+  ORG_UPDATED: 'ORG_UPDATED',
+  ORG_DOCUMENT_UPLOADED: 'ORG_DOCUMENT_UPLOADED',
+  ORG_DOCUMENT_DELETED: 'ORG_DOCUMENT_DELETED',
+  ORG_SUBMITTED: 'ORG_SUBMITTED',
+  ORG_VERIFIED: 'ORG_VERIFIED',
+  ORG_REJECTED: 'ORG_REJECTED',
+  USER_APPROVED: 'USER_APPROVED',
+  USER_REJECTED: 'USER_REJECTED',
 };
 
 export const AUDIT_ACTIONS_ARRAY = Object.values(AUDIT_ACTIONS);
