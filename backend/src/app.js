@@ -57,7 +57,8 @@ app.use((req, _res, next) => {
     return next();
   }
 
-  if (mongoose.connection.readyState !== 1) {
+  // Allow request if connected (1) or connecting/reconnecting (2, queries will buffer)
+  if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
     return next(
       new ApiError(
         503,

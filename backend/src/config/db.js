@@ -16,7 +16,12 @@ const connectDB = async () => {
   }
 
   try {
-    const conn = await mongoose.connect(env.MONGODB_URI);
+    const conn = await mongoose.connect(env.MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+      heartbeatFrequencyMS: 10000,
+    });
 
     console.log(`✅ MongoDB connected: ${conn.connection.host}`);
     console.log(`📦 Database: ${conn.connection.name}`);
@@ -27,7 +32,19 @@ const connectDB = async () => {
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️  MongoDB disconnected');
+      console.warn('⚠️  MongoDB disconnected. Attempting automatic reconnection...');
+      setTimeout(() => {
+        if (mongoose.connection.readyState === 0) {
+          mongoose.connect(env.MONGODB_URI, {
+            maxPoolSize: 10,
+            serverSelectionTimeoutMS: 15000,
+            socketTimeoutMS: 45000,
+            heartbeatFrequencyMS: 10000,
+          }).catch((err) => {
+            console.error('❌ MongoDB auto-reconnect failed:', err.message);
+          });
+        }
+      }, 2000);
     });
 
     mongoose.connection.on('reconnected', () => {
