@@ -183,7 +183,7 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 | 0     | ✅ Setup & Foundation             | **Complete**  |
 | 1     | ✅ Auth & Roles                   | **Complete**  |
 | 2     | ✅ Landing Page & Org Onboarding  | **Complete**  |
-| 3     | Donation Submission               | Planned       |
+| 3     | ✅ Donation Submission & Screening | **Complete**  |
 | 4     | Expiry Tracker                    | Planned       |
 | 5     | Pharmacist Verification           | Planned       |
 | 6     | Geo Matching & Requests           | Planned       |
@@ -192,7 +192,7 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 
 ---
 
-## 📡 API Endpoints (Phases 1 & 2)
+## 📡 API Endpoints (Phases 1, 2 & 3)
 
 ### Auth (`/api/auth`)
 - `POST /register` — Register donor, pharmacist, or NGO account
@@ -202,6 +202,19 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 - `PATCH /me` — Update user profile details
 - `POST /forgot-password` — Initiate password reset token
 - `POST /reset-password/:token` — Reset password with token
+
+### Donations (`/api/donations` — Role: `donor` unless specified)
+- `POST /` — Create a draft donation with items (max 5 active drafts per donor)
+- `GET /my` — Paginated list of my donations with status counts and search
+- `GET /my/summary` — Real counts for donor dashboard (total, underVerification, approved, rejected, cancelled)
+- `GET /:id` — Full details with items & photo metadata (Owner donor, Admin, or Approved Pharmacist)
+- `PATCH /:id` — Edit draft details and items (draft only, 409 otherwise)
+- `DELETE /:id` — Permanently delete draft and photo files from disk
+- `POST /:id/items/:itemId/photos` — Multipart photo upload (max 4 per item, 5MB, JPG/PNG/WebP, magic bytes checked)
+- `DELETE /:id/items/:itemId/photos/:photoId` — Delete photo file from storage
+- `GET /:donationId/items/:itemId/photos/:photoId/file` — Authenticated stream (`nosniff`, Owner, Admin, or Approved Pharmacist)
+- `POST /:id/submit` — Submit draft for automated screening, assign sequential `DON-YYYY-000001` & `MED-YYYY-000001` IDs
+- `POST /:id/cancel` — Cancel donation before approval with mandatory reason
 
 ### Organizations (`/api/organizations` — Role: `ngo`)
 - `POST /` — Create organization draft (single organization per NGO user)
@@ -232,12 +245,45 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 ### Public (`/api/public` — Open access)
 - `GET /stats` — Real platform statistics (verified orgs, registered donors, verified pharmacists, cities)
 - `GET /organizations` — Directory of verified organizations with sanitized public fields
+- `GET /config` — Platform policy configuration (`minShelfLifeDays`, `maxItems`, `maxPhotos`)
+
+---
+
+## 🛡️ Automated Medicine Screening Rules
+
+Every submitted medicine item undergoes strict automated screening before pharmacist inspection:
+
+| Rule Code | Trigger Condition | Outcome |
+| --------- | ----------------- | ------- |
+| `EXPIRED` | Expiration date is in the past (using month-end Asia/Kolkata) | Item Rejected |
+| `SHELF_LIFE_TOO_SHORT` | Remaining shelf life is below `MIN_REMAINING_SHELF_LIFE_DAYS` (default: 90 days) | Item Rejected |
+| `PACKAGING_NOT_SEALED` | Reported packaging condition is `opened` or `damaged` | Item Rejected |
+| `LOOSE_TABLETS` | Packaging is `loose_tablets` or cut strips | Item Rejected |
+| `INJECTION_NOT_ACCEPTED` | Dosage form is `injection` or unit is `vial` | Item Rejected |
+| `COLD_CHAIN_NOT_ACCEPTED` | Storage is `refrigerated` or matches cold-chain keywords (e.g. insulin, vaccines) | Item Rejected |
+| `CONTROLLED_SUBSTANCE` | Matches Schedule X / narcotic keywords (e.g. tramadol, morphine, alprazolam) | Item Rejected |
+| `BAD_STORAGE` | Storage reported as `exposed_heat_or_moisture` | Item Rejected |
+| `UNREADABLE_BATCH` | Batch number missing or shorter than 3 characters | Item Rejected |
+| `DUPLICATE_ITEM` | Same donor already submitted identical brand, batch number, and expiration date | Item Rejected |
+| `MISSING_PHOTO` | Fewer than 1 photograph attached to the item at submit time | Item Rejected |
 
 ---
 
 ## 💾 Storage Architecture Note
 
-Local disk storage (`uploads/org-docs/<orgId>/`) is used in Phase 2 wrapped strictly via `src/services/storage.service.js`. Uploaded documents are never served statically via `express.static` and require authenticated role-based access checks. Because ephemeral serverless/container hosts wipe local storage upon sleep or redeployment, Phase 8 will transition to free cloud object storage (e.g. Cloudinary) directly inside `storage.service.js` with zero modifications to business controllers.
+Local disk storage is used in early phases wrapped strictly through `src/services/storage.service.js`:
+- Organization verification documents: `uploads/org-docs/<orgId>/`
+- Medicine packaging photos: `uploads/medicine-photos/<donationId>/<itemId>/`
+
+Uploaded files are **never** served through static Express paths. All requests route through authenticated streaming endpoints with strict role-based access checks and `X-Content-Type-Options: nosniff`. In Phase 8, this wrapper will seamlessly swap to free cloud object storage (e.g. Cloudinary) without touching any controller code.
+
+---
+
+## ⚖️ Compliance & WHO Policy Note
+
+- **WHO Guidelines Context**: The World Health Organization (WHO) Guidelines for Medicine Donations recommend that donated pharmaceuticals have a remaining shelf life of at least one year upon arrival. MediBridge enforces an institutional threshold via `MIN_REMAINING_SHELF_LIFE_DAYS` (default 90 days in local testing) to allow flexible configuration based on community emergency clinic requirements.
+- **Verification Guarantee**: No medicine can be distributed without licensed pharmacist physical inspection and verification.
+- **Educational Prototype**: MediBridge is an educational and academic software exchange platform; redistributed medicines are received exclusively by registered charitable clinics and licensed NGOs.
 
 ---
 

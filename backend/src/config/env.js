@@ -33,6 +33,11 @@ const envSchema = z.object({
     .optional()
     .transform((val) => val === 'true'),
 
+  // Donation & Medicine Screening Limits
+  MIN_REMAINING_SHELF_LIFE_DAYS: z.string().default('90').transform(Number),
+  MAX_ITEMS_PER_DONATION: z.string().default('10').transform(Number),
+  MAX_PHOTOS_PER_MEDICINE: z.string().default('4').transform(Number),
+
   // Email notifications
   EMAIL_FROM: z.string().default('MediBridge <no-reply@medibridge.local>'),
   SMTP_HOST: z.string().optional(),

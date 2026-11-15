@@ -11,8 +11,9 @@ const donationSchema = new mongoose.Schema(
     },
     donationCode: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
+      trim: true,
       index: true,
     },
     items: [
@@ -21,11 +22,38 @@ const donationSchema = new mongoose.Schema(
         ref: 'Medicine',
       },
     ],
+    status: {
+      type: String,
+      enum: DONATION_STATUS_ARRAY,
+      default: DONATION_STATUS.DRAFT,
+      index: true,
+    },
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: DONATION_STATUS_ARRAY,
+          required: true,
+        },
+        note: {
+          type: String,
+          trim: true,
+        },
+        at: {
+          type: Date,
+          default: Date.now,
+        },
+        by: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+      },
+    ],
     pickupAddress: {
-      address: { type: String, required: true },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      pincode: { type: String, required: true },
+      line1: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      pincode: { type: String, trim: true },
     },
     location: {
       type: {
@@ -38,14 +66,42 @@ const donationSchema = new mongoose.Schema(
         default: [0, 0],
       },
     },
-    status: {
+    contactPhone: {
       type: String,
-      enum: DONATION_STATUS_ARRAY,
-      default: DONATION_STATUS.SUBMITTED,
-      index: true,
+      trim: true,
+    },
+    preferredTimeSlot: {
+      type: String,
+      trim: true,
+    },
+    notes: {
+      type: String,
+      maxlength: 300,
+      trim: true,
+      default: '',
+    },
+    declarations: {
+      sealedAndUnused: { type: Boolean, default: false },
+      storedProperly: { type: Boolean, default: false },
+      notControlled: { type: Boolean, default: false },
+      genuineInfo: { type: Boolean, default: false },
+    },
+    submittedAt: {
+      type: Date,
+      default: null,
     },
     rejectionReason: {
       type: String,
+      trim: true,
+      default: null,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    cancelReason: {
+      type: String,
+      trim: true,
       default: null,
     },
     matchedOrganizationId: {
@@ -53,10 +109,6 @@ const donationSchema = new mongoose.Schema(
       ref: 'Organization',
       default: null,
       index: true,
-    },
-    notes: {
-      type: String,
-      default: null,
     },
   },
   {
@@ -66,6 +118,6 @@ const donationSchema = new mongoose.Schema(
 
 donationSchema.index({ location: '2dsphere' });
 
-const Donation = mongoose.model('Donation', donationSchema);
+const Donation = mongoose.models.Donation || mongoose.model('Donation', donationSchema);
 
 export default Donation;

@@ -3,6 +3,7 @@ import Organization from '../models/Organization.js';
 import User from '../models/User.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { ORG_STATUS, ROLES, APPROVAL_STATUS } from '../config/constants.js';
+import env from '../config/env.js';
 
 /**
  * Get real, verified public impact statistics.
@@ -63,8 +64,27 @@ export const getPublicOrganizations = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Get public platform policies and donation configuration limits.
+ * @route GET /api/public/config
+ */
+export const getPublicConfig = asyncHandler(async (_req, res) => {
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        minShelfLifeDays: env.MIN_REMAINING_SHELF_LIFE_DAYS,
+        maxItems: env.MAX_ITEMS_PER_DONATION,
+        maxPhotos: env.MAX_PHOTOS_PER_MEDICINE,
+      },
+      'Public platform configuration retrieved successfully.'
+    )
+  );
+});
+
 export default {
   getPublicStats,
   getPublicOrganizations,
+  getPublicConfig,
 };
 

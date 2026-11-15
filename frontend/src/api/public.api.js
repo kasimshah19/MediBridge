@@ -16,7 +16,16 @@ export const getPublicOrganizations = async (limit = 6) => {
   return response.data;
 };
 
+/**
+ * Get public platform policies and limits (e.g. min shelf life days).
+ */
+export const getPublicConfig = async () => {
+  const response = await api.get('/public/config');
+  return response.data;
+};
+
 export default {
   getPublicStats,
   getPublicOrganizations,
+  getPublicConfig,
 };

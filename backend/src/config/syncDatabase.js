@@ -7,6 +7,7 @@ import Request from '../models/Request.js';
 import Transfer from '../models/Transfer.js';
 import Notification from '../models/Notification.js';
 import AuditLog from '../models/AuditLog.js';
+import Counter from '../models/Counter.js';
 
 const models = [
   User,
@@ -18,6 +19,7 @@ const models = [
   Transfer,
   Notification,
   AuditLog,
+  Counter,
 ];
 
 /**

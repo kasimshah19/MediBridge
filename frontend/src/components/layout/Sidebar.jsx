@@ -72,12 +72,29 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
     });
   }
 
+  // Donor active navigation for Phase 3
+  if (user.role === 'donor') {
+    primaryNav.splice(1, 0,
+      {
+        name: 'Donate Medicines',
+        path: '/donor/donate',
+        icon: PackagePlus,
+        active: location.pathname.startsWith('/donor/donate'),
+      },
+      {
+        name: 'My Donations',
+        path: '/donor/donations',
+        icon: Heart,
+        active: location.pathname.startsWith('/donor/donations'),
+      }
+    );
+  }
+
   // Role-specific roadmap features (planned for subsequent phases)
   const roleUpcoming = {
     donor: [
-      { name: 'Submit Donation', icon: PackagePlus, phase: 'Phase 3' },
-      { name: 'My Donations', icon: Heart, phase: 'Phase 3' },
-      { name: 'Medicine Expiry Log', icon: Clock, phase: 'Phase 4' },
+      { name: 'Medicine Expiry Tracker', icon: Clock, phase: 'Phase 4' },
+      { name: 'QR Handover Tracking', icon: QrCode, phase: 'Phase 7' },
     ],
     pharmacist: [
       { name: 'Verification Queue', icon: ClipboardCheck, phase: 'Phase 5' },

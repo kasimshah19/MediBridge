@@ -6,9 +6,33 @@ import {
   MEDICINE_TYPE_ARRAY,
   PACKAGING_CONDITION,
   PACKAGING_CONDITION_ARRAY,
+  STORAGE_CONDITION,
+  STORAGE_CONDITION_ARRAY,
+  MEDICINE_UNIT,
+  MEDICINE_UNIT_ARRAY,
   PRIORITY_LEVELS,
   PRIORITY_LEVELS_ARRAY,
+  REJECTION_SOURCES_ARRAY,
 } from '../config/constants.js';
+
+const photoSchema = new mongoose.Schema(
+  {
+    originalName: { type: String, required: true, trim: true },
+    storedName: { type: String, required: true, select: false },
+    mimeType: { type: String, required: true },
+    size: { type: Number, required: true },
+    uploadedAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
+const screeningReasonSchema = new mongoose.Schema(
+  {
+    code: { type: String, required: true },
+    message: { type: String, required: true },
+  },
+  { _id: false }
+);
 
 const medicineSchema = new mongoose.Schema(
   {
@@ -26,13 +50,19 @@ const medicineSchema = new mongoose.Schema(
     },
     medicineId: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
+      trim: true,
       index: true,
     },
     name: {
       type: String,
       required: true,
+      trim: true,
+      index: true,
+    },
+    nameLower: {
+      type: String,
       trim: true,
       index: true,
     },
@@ -49,7 +79,12 @@ const medicineSchema = new mongoose.Schema(
     batchNumber: {
       type: String,
       required: true,
+      uppercase: true,
       trim: true,
+    },
+    manufacturingDate: {
+      type: Date,
+      default: null,
     },
     expiryDate: {
       type: Date,
@@ -63,8 +98,12 @@ const medicineSchema = new mongoose.Schema(
     },
     unit: {
       type: String,
-      required: true,
-      default: 'strips',
+      enum: MEDICINE_UNIT_ARRAY,
+      default: MEDICINE_UNIT.STRIP,
+    },
+    unitsPerPack: {
+      type: Number,
+      default: null,
     },
     medicineType: {
       type: String,
@@ -76,16 +115,22 @@ const medicineSchema = new mongoose.Schema(
       enum: PACKAGING_CONDITION_ARRAY,
       default: PACKAGING_CONDITION.SEALED,
     },
+    storageCondition: {
+      type: String,
+      enum: STORAGE_CONDITION_ARRAY,
+      default: STORAGE_CONDITION.ROOM_TEMPERATURE,
+    },
     storageHistory: {
       type: String,
-      default: 'standard_room_temperature',
+      maxlength: 300,
+      trim: true,
+      default: '',
     },
-    photos: [
-      {
-        url: { type: String, required: true },
-        caption: { type: String, default: '' },
-      },
-    ],
+    isPrescriptionOnly: {
+      type: Boolean,
+      default: false,
+    },
+    photos: [photoSchema],
     priority: {
       type: String,
       enum: PRIORITY_LEVELS_ARRAY,
@@ -97,6 +142,23 @@ const medicineSchema = new mongoose.Schema(
       default: MEDICINE_STATUS.PENDING,
       index: true,
     },
+    screening: {
+      status: {
+        type: String,
+        enum: ['passed', 'rejected', 'not_checked'],
+        default: 'not_checked',
+      },
+      reasons: [screeningReasonSchema],
+      checkedAt: {
+        type: Date,
+        default: null,
+      },
+    },
+    rejectionSource: {
+      type: String,
+      enum: [...REJECTION_SOURCES_ARRAY, null],
+      default: null,
+    },
     qrCode: {
       type: String,
       default: null,
@@ -107,6 +169,20 @@ const medicineSchema = new mongoose.Schema(
   }
 );
 
-const Medicine = mongoose.model('Medicine', medicineSchema);
+// Pre-save to ensure nameLower is always synced
+medicineSchema.pre('save', function (next) {
+  if (this.name) {
+    this.nameLower = this.name.toLowerCase().trim();
+  }
+  if (this.batchNumber) {
+    this.batchNumber = this.batchNumber.toUpperCase().trim();
+  }
+  next();
+});
+
+// Compound index for duplicate detection
+medicineSchema.index({ donorId: 1, nameLower: 1, batchNumber: 1, expiryDate: 1 });
+
+const Medicine = mongoose.models.Medicine || mongoose.model('Medicine', medicineSchema);
 
 export default Medicine;

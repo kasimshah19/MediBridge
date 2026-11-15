@@ -23,6 +23,9 @@ import ApprovalPending from '../pages/auth/ApprovalPending';
 // Profile & Dashboard pages
 import Profile from '../pages/user/Profile';
 import DonorDashboard from '../pages/donor/DonorDashboard';
+import DonateWizard from '../pages/donor/DonateWizard';
+import MyDonations from '../pages/donor/MyDonations';
+import DonationDetail from '../pages/donor/DonationDetail';
 import PharmacistDashboard from '../pages/pharmacist/PharmacistDashboard';
 import NgoDashboard from '../pages/ngo/NgoDashboard';
 import NgoOnboarding from '../pages/ngo/NgoOnboarding';
@@ -62,6 +65,10 @@ export default function AppRoutes() {
           {/* Role-Guarded Dashboards */}
           <Route element={<ProtectedRoute allowedRoles={['donor', 'admin']} />}>
             <Route path="/donor/dashboard" element={<DonorDashboard />} />
+            <Route path="/donor/donate" element={<DonateWizard />} />
+            <Route path="/donor/donate/:id" element={<DonateWizard />} />
+            <Route path="/donor/donations" element={<MyDonations />} />
+            <Route path="/donor/donations/:id" element={<DonationDetail />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['pharmacist', 'admin']} />}>

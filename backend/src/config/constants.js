@@ -74,6 +74,7 @@ export const ORG_SERVICES_ARRAY = Object.values(ORG_SERVICES);
 
 // Donation statuses
 export const DONATION_STATUS = {
+  DRAFT: 'draft',
   SUBMITTED: 'submitted',
   SCREENING_REJECTED: 'screening_rejected',
   UNDER_VERIFICATION: 'under_verification',
@@ -107,6 +108,10 @@ export const MEDICINE_TYPE = {
   CAPSULE: 'capsule',
   SYRUP: 'syrup',
   OINTMENT: 'ointment',
+  DROPS: 'drops',
+  INHALER: 'inhaler',
+  POWDER: 'powder',
+  INJECTION: 'injection',
   OTHER: 'other',
 };
 
@@ -117,9 +122,100 @@ export const PACKAGING_CONDITION = {
   SEALED: 'sealed',
   OPENED: 'opened',
   DAMAGED: 'damaged',
+  LOOSE_TABLETS: 'loose_tablets',
 };
 
 export const PACKAGING_CONDITION_ARRAY = Object.values(PACKAGING_CONDITION);
+
+// Storage conditions
+export const STORAGE_CONDITION = {
+  ROOM_TEMPERATURE: 'room_temperature',
+  REFRIGERATED: 'refrigerated',
+  UNKNOWN: 'unknown',
+  EXPOSED_HEAT_OR_MOISTURE: 'exposed_heat_or_moisture',
+};
+
+export const STORAGE_CONDITION_ARRAY = Object.values(STORAGE_CONDITION);
+
+// Medicine units
+export const MEDICINE_UNIT = {
+  STRIP: 'strip',
+  BOTTLE: 'bottle',
+  TUBE: 'tube',
+  VIAL: 'vial',
+  BOX: 'box',
+  PACK: 'pack',
+};
+
+export const MEDICINE_UNIT_ARRAY = Object.values(MEDICINE_UNIT);
+
+// Screening rule codes
+export const SCREENING_CODES = {
+  EXPIRED: 'EXPIRED',
+  SHELF_LIFE_TOO_SHORT: 'SHELF_LIFE_TOO_SHORT',
+  PACKAGING_NOT_SEALED: 'PACKAGING_NOT_SEALED',
+  LOOSE_TABLETS: 'LOOSE_TABLETS',
+  INJECTION_NOT_ACCEPTED: 'INJECTION_NOT_ACCEPTED',
+  COLD_CHAIN_NOT_ACCEPTED: 'COLD_CHAIN_NOT_ACCEPTED',
+  CONTROLLED_SUBSTANCE: 'CONTROLLED_SUBSTANCE',
+  BAD_STORAGE: 'BAD_STORAGE',
+  UNREADABLE_BATCH: 'UNREADABLE_BATCH',
+  DUPLICATE_ITEM: 'DUPLICATE_ITEM',
+  MISSING_PHOTO: 'MISSING_PHOTO',
+};
+
+export const SCREENING_CODES_ARRAY = Object.values(SCREENING_CODES);
+
+// Controlled substances keywords (Schedule X / Narcotic / Psychotropic items)
+export const CONTROLLED_SUBSTANCE_KEYWORDS = [
+  'morphine',
+  'codeine',
+  'fentanyl',
+  'tramadol',
+  'alprazolam',
+  'diazepam',
+  'clonazepam',
+  'zolpidem',
+  'methadone',
+  'buprenorphine',
+  'phenobarbital',
+  'lorazepam',
+  'nitrazepam',
+  'oxycodone',
+  'tapentadol',
+  'ketamine',
+  'midazolam',
+  'chlordiazepoxide',
+  'clobazam',
+  'pentazocine',
+];
+
+// Cold-chain keywords (Vaccines, insulins, biologics requiring 2-8°C)
+export const COLD_CHAIN_KEYWORDS = [
+  'insulin',
+  'vaccine',
+  'vaccin',
+  'interferon',
+  'heparin',
+  'erythropoietin',
+  'filgrastim',
+  'botox',
+  'somatropin',
+  'adalimumab',
+  'etanercept',
+  'infliximab',
+  'rituximab',
+  'trastuzumab',
+];
+
+// Rejection sources
+export const REJECTION_SOURCES = {
+  AUTO_SCREENING: 'auto_screening',
+  PHARMACIST: 'pharmacist',
+  DONOR_CANCELLED: 'donor_cancelled',
+};
+
+export const REJECTION_SOURCES_ARRAY = Object.values(REJECTION_SOURCES);
 
 // Priority levels
 export const PRIORITY_LEVELS = {
@@ -180,6 +276,14 @@ export const AUDIT_ACTIONS = {
   ORG_REJECTED: 'ORG_REJECTED',
   USER_APPROVED: 'USER_APPROVED',
   USER_REJECTED: 'USER_REJECTED',
+  DONATION_CREATED: 'DONATION_CREATED',
+  DONATION_UPDATED: 'DONATION_UPDATED',
+  DONATION_PHOTO_UPLOADED: 'DONATION_PHOTO_UPLOADED',
+  DONATION_PHOTO_DELETED: 'DONATION_PHOTO_DELETED',
+  DONATION_SUBMITTED: 'DONATION_SUBMITTED',
+  DONATION_SCREENING_REJECTED: 'DONATION_SCREENING_REJECTED',
+  DONATION_CANCELLED: 'DONATION_CANCELLED',
+  DONATION_DELETED: 'DONATION_DELETED',
 };
 
 export const AUDIT_ACTIONS_ARRAY = Object.values(AUDIT_ACTIONS);
