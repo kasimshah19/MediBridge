@@ -1,0 +1,40 @@
+name: Daily expiry check
+
+# Trigger daily at 18:35 UTC (00:05 Asia/Kolkata) and allow manual triggering
+on:
+  schedule:
+    - cron: '35 18 * * *'
+  workflow_dispatch:
+
+# REQUIRED GITHUB REPOSITORY SECRETS:
+# 1. BACKEND_URL: Base URL of your deployed backend service (e.g. https://api.medibridge.org)
+#    - Do NOT include trailing slash.
+#    - Do NOT include /api.
+# 2. CRON_SECRET: Secret token matching the CRON_SECRET in the backend environment variables
+#    - Must be at least 24 characters in production.
+#
+# IMPORTANT CAVEATS:
+# - GitHub Actions scheduled cron runs may be delayed by several minutes during peak queue loads.
+# - GitHub automatically suspends scheduled workflows if the repository has no commits for 60 consecutive days.
+# - To ensure zero downtime or missed expiry cycles, MediBridge employs three complementary execution paths:
+#   1. Internal node-cron runner (jobs/expiry.job.js) running within the Node server.
+#   2. GitHub Actions daily webhook (this workflow).
+#   3. Startup catch-up check ensuring any missed run in the last 24h runs upon container wake.
+
+jobs:
+  trigger-expiry-check:
+    name: Run Expiry Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger MediBridge Expiry Webhook
+        run: |
+          echo "Triggering MediBridge scheduled expiry check..."
+          curl -fsS \
+            --retry 5 \
+            --retry-delay 20 \
+            --retry-all-errors \
+            --max-time 120 \
+            -X POST \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.BACKEND_URL }}/api/internal/jobs/expiry"
+

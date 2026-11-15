@@ -16,7 +16,7 @@ import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { generateDonationCode, generateMedicineId } from '../utils/generateId.js';
 import { screenMedicine } from '../services/screening.service.js';
-import { calculatePriority, normalizeExpiryDate } from '../services/expiry.service.js';
+import { calculatePriority, normalizeExpiryDate, decorateMedicine } from '../services/expiry.service.js';
 import storageService from '../services/storage.service.js';
 
 /**
@@ -165,6 +165,15 @@ export const getMyDonations = async (req, res, next) => {
       Donation.countDocuments(filter),
     ]);
 
+    const now = new Date();
+    const formattedDonations = donations.map((d) => {
+      const dObj = d.toObject ? d.toObject() : { ...d };
+      if (Array.isArray(dObj.items)) {
+        dObj.items = dObj.items.map((item) => decorateMedicine(item, now));
+      }
+      return dObj;
+    });
+
     // Calculate status counts for UI tabs
     const [
       allCount,
@@ -201,7 +210,7 @@ export const getMyDonations = async (req, res, next) => {
       new ApiResponse(
         200,
         {
-          donations,
+          donations: formattedDonations,
           pagination: {
             page: pageNum,
             limit: limitNum,
@@ -316,7 +325,13 @@ export const getDonationById = async (req, res, next) => {
       throw new ApiError(404, 'Donation record not found.');
     }
 
-    return res.status(200).json(new ApiResponse(200, donation, 'Donation retrieved successfully.'));
+    const now = new Date();
+    const donationObj = donation.toObject ? donation.toObject() : { ...donation };
+    if (Array.isArray(donationObj.items)) {
+      donationObj.items = donationObj.items.map((item) => decorateMedicine(item, now));
+    }
+
+    return res.status(200).json(new ApiResponse(200, donationObj, 'Donation retrieved successfully.'));
   } catch (error) {
     next(error);
   }

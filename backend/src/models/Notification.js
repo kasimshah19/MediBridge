@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { NOTIFICATION_TYPES_ARRAY, NOTIFICATION_TYPES } from '../config/constants.js';
 
 const notificationSchema = new mongoose.Schema(
   {
@@ -20,8 +21,8 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      default: 'system',
-      enum: ['system', 'verification', 'donation', 'transfer', 'alert'],
+      default: NOTIFICATION_TYPES.SYSTEM,
+      enum: NOTIFICATION_TYPES_ARRAY,
     },
     isRead: {
       type: Boolean,

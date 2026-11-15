@@ -48,6 +48,22 @@ export const getAdminOverview = async () => {
   return response.data;
 };
 
+/**
+ * Get recent scheduled expiry jobs and cron execution status.
+ */
+export const getAdminExpiryJobs = async (limit = 10) => {
+  const response = await api.get('/admin/jobs/expiry', { params: { limit } });
+  return response.data;
+};
+
+/**
+ * Trigger manual expiry check (dry run or real execution).
+ */
+export const runAdminExpiryCheck = async ({ dryRun = false, asOf } = {}) => {
+  const response = await api.post('/admin/jobs/expiry/run', { dryRun, asOf });
+  return response.data;
+};
+
 export default {
   getAdminOrganizations,
   getAdminOrganizationById,
@@ -55,5 +71,7 @@ export default {
   getAdminUsers,
   reviewUser,
   getAdminOverview,
+  getAdminExpiryJobs,
+  runAdminExpiryCheck,
 };
 

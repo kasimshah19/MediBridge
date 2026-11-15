@@ -253,10 +253,59 @@ export const sendUserRejectedEmail = async ({ to, name, role, note }) => {
   });
 };
 
+/**
+ * Send expiry alert notification email to donor (30-day warning or expired).
+ */
+export const sendExpiryAlertEmail = async ({ to, name, count, type }) => {
+  const isExpiredType = type === 'expired';
+  const subject = isExpiredType
+    ? `MediBridge Alert - ${count} Medicine${count === 1 ? '' : 's'} Expired`
+    : `MediBridge Alert - ${count} Medicine${count === 1 ? '' : 's'} Expiring in 30 Days`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px; color: #1E293B; }
+          .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #E2E8F0; padding: 32px; }
+          .badge { display: inline-block; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; margin-bottom: 16px; ${
+            isExpiredType ? 'background: #FFE4E6; color: #E11D48;' : 'background: #FEF3C7; color: #D97706;'
+          } }
+          .cta { display: inline-block; background-color: #0D9488; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="badge">${isExpiredType ? 'EXPIRED' : 'EXPIRING SOON'}</div>
+          <h2>Medicine Shelf-Life Update</h2>
+          <p>Hello ${name},</p>
+          <p>${
+            isExpiredType
+              ? `${count} of your medicine${count === 1 ? '' : 's'} reached expiry and ${count === 1 ? 'has' : 'have'} been retired from the donation network.`
+              : `${count} of your medicine${count === 1 ? '' : 's'} will expire within the next 30 days.`
+          }</p>
+          <p>You can check status and details in your Expiry Tracker dashboard.</p>
+          <a class="cta" href="${env.CLIENT_URL}/donor/expiry?priority=critical">View Expiry Tracker</a>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendMailSafe({
+    to,
+    subject,
+    html,
+    devLogSummary: `Expiry alert (${type}) sent to ${name} for ${count} items.`,
+  });
+};
+
 export default {
   sendPasswordResetEmail,
   sendOrgVerifiedEmail,
   sendOrgRejectedEmail,
   sendUserApprovedEmail,
   sendUserRejectedEmail,
+  sendExpiryAlertEmail,
 };

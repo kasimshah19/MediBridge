@@ -8,6 +8,7 @@ import Transfer from '../models/Transfer.js';
 import Notification from '../models/Notification.js';
 import AuditLog from '../models/AuditLog.js';
 import Counter from '../models/Counter.js';
+import JobRun from '../models/JobRun.js';
 
 const models = [
   User,
@@ -20,6 +21,7 @@ const models = [
   Notification,
   AuditLog,
   Counter,
+  JobRun,
 ];
 
 /**

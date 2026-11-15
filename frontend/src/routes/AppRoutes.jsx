@@ -26,12 +26,14 @@ import DonorDashboard from '../pages/donor/DonorDashboard';
 import DonateWizard from '../pages/donor/DonateWizard';
 import MyDonations from '../pages/donor/MyDonations';
 import DonationDetail from '../pages/donor/DonationDetail';
+import DonorExpiry from '../pages/donor/DonorExpiry';
 import PharmacistDashboard from '../pages/pharmacist/PharmacistDashboard';
 import NgoDashboard from '../pages/ngo/NgoDashboard';
 import NgoOnboarding from '../pages/ngo/NgoOnboarding';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminOrganizations from '../pages/admin/AdminOrganizations';
 import AdminPharmacists from '../pages/admin/AdminPharmacists';
+import AdminExpiry from '../pages/admin/AdminExpiry';
 
 export default function AppRoutes() {
   return (
@@ -69,6 +71,7 @@ export default function AppRoutes() {
             <Route path="/donor/donate/:id" element={<DonateWizard />} />
             <Route path="/donor/donations" element={<MyDonations />} />
             <Route path="/donor/donations/:id" element={<DonationDetail />} />
+            <Route path="/donor/expiry" element={<DonorExpiry />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['pharmacist', 'admin']} />}>
@@ -84,6 +87,7 @@ export default function AppRoutes() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/organizations" element={<AdminOrganizations />} />
             <Route path="/admin/pharmacists" element={<AdminPharmacists />} />
+            <Route path="/admin/expiry" element={<AdminExpiry />} />
           </Route>
         </Route>
       </Route>

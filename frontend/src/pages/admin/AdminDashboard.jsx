@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Stethoscope,
   Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
@@ -20,16 +21,23 @@ import Button from '../../components/ui/Button';
 import Spinner from '../../components/ui/Spinner';
 import EmptyState from '../../components/ui/EmptyState';
 import { getAdminOverview } from '../../api/admin.api';
+import { getExpirySummary } from '../../api/expiry.api';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [overview, setOverview] = useState(null);
+  const [expirySummary, setExpirySummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAdminOverview()
-      .then((res) => setOverview(res.data))
-      .catch(() => {})
+    Promise.all([
+      getAdminOverview().catch(() => null),
+      getExpirySummary().catch(() => null),
+    ])
+      .then(([overviewRes, expiryRes]) => {
+        if (overviewRes?.data) setOverview(overviewRes.data);
+        if (expiryRes?.data) setExpirySummary(expiryRes.data);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -59,7 +67,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Real Live StatCards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Link to="/admin/organizations?status=pending">
           <StatCard
             title="Pending Organizations"
@@ -93,12 +101,23 @@ export default function AdminDashboard() {
           />
         </Link>
 
+        <Link to="/admin/expiry?priority=critical">
+          <StatCard
+            title="Critical Expiring"
+            value={expirySummary?.critical ?? 0}
+            icon={AlertTriangle}
+            color="rose"
+            description="≤ 30 days left (needs match)"
+            className="hover:border-rose-300 transition-all cursor-pointer"
+          />
+        </Link>
+
         <StatCard
           title="Total Registered Donors"
           value={overview?.totalDonors ?? 0}
           icon={Users}
           color="emerald"
-          description={`From ${overview?.totalUsers ?? 0} total platform users`}
+          description={`From ${overview?.totalUsers ?? 0} total users`}
         />
       </div>
 

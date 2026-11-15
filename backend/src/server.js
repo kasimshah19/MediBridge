@@ -1,6 +1,7 @@
 import env from './config/env.js';
 import connectDB from './config/db.js';
 import syncDatabaseCollections from './config/syncDatabase.js';
+import { initExpiryJob, runStartupCatchupIfRequired } from './jobs/expiry.job.js';
 import app from './app.js';
 
 const PORT = env.PORT;
@@ -15,9 +16,11 @@ const startServer = async () => {
   // Connect to MongoDB
   const conn = await connectDB();
 
-  // If connected, sync all 9 collections & indexes
+  // If connected, sync all collections & indexes and start scheduled jobs
   if (conn) {
     await syncDatabaseCollections();
+    initExpiryJob();
+    runStartupCatchupIfRequired();
   }
 
   const server = app.listen(PORT, () => {

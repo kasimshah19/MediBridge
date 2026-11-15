@@ -21,13 +21,17 @@ import Button from '../../components/ui/Button';
 import EmptyState from '../../components/ui/EmptyState';
 import Spinner from '../../components/ui/Spinner';
 import StatusBadge from '../../components/common/StatusBadge';
+import ExpiryCountdown from '../../components/common/ExpiryCountdown';
+import PriorityChip from '../../components/common/PriorityChip';
 import { getMyDonations, getMyDonationsSummary } from '../../api/donation.api';
+import { getExpiryItems } from '../../api/expiry.api';
 import { getMyAuditLogs } from '../../api/user.api';
 
 export default function DonorDashboard() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
   const [recentDonations, setRecentDonations] = useState([]);
+  const [urgentExpiryItems, setUrgentExpiryItems] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,15 +39,17 @@ export default function DonorDashboard() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [sumRes, donRes, logsRes] = await Promise.all([
+        const [sumRes, donRes, logsRes, expiryRes] = await Promise.all([
           getMyDonationsSummary().catch(() => null),
           getMyDonations({ limit: 5 }).catch(() => null),
           getMyAuditLogs().catch(() => null),
+          getExpiryItems({ sort: 'expiryDate', order: 'asc', limit: 3 }).catch(() => null),
         ]);
 
         if (sumRes?.data) setSummary(sumRes.data);
         if (donRes?.data?.donations) setRecentDonations(donRes.data.donations);
         if (logsRes?.data?.logs) setLogs(logsRes.data.logs);
+        if (expiryRes?.data?.items) setUrgentExpiryItems(expiryRes.data.items);
       } finally {
         setLoading(false);
       }
@@ -284,8 +290,67 @@ export default function DonorDashboard() {
           </Card>
         </div>
 
-        {/* Right Column (4 cols): Activity Timeline & Profile Shortcut */}
+        {/* Right Column (4 cols): Expiry Alerts & Activity Timeline */}
         <div className="lg:col-span-4 space-y-6">
+          {/* Expiry Alerts Card */}
+          <Card className="p-6 bg-white shadow-soft border border-slate-100">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2.5">
+                <Clock size={18} className="text-amber-600" />
+                <h3 className="text-base font-heading font-bold text-text-heading">
+                  Expiry Alerts
+                </h3>
+              </div>
+              <Link
+                to="/donor/expiry"
+                className="text-xs font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1 hover:underline"
+              >
+                <span>View all</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="p-6 text-center">
+                <Spinner size="sm" />
+              </div>
+            ) : urgentExpiryItems.length === 0 ? (
+              <p className="text-xs text-text-muted text-center py-4">
+                No active medicines near expiration.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {urgentExpiryItems.map((item) => (
+                  <div
+                    key={item._id}
+                    className="p-3 rounded-2xl border border-slate-100 bg-slate-50/70 space-y-2 text-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-900 truncate">{item.name}</p>
+                        <p className="text-[11px] text-text-muted">
+                          Batch: {item.batchNumber} • {item.quantity} {item.unit}
+                        </p>
+                      </div>
+                      <PriorityChip
+                        priority={item.priority}
+                        isExpired={item.isExpired}
+                        size="sm"
+                      />
+                    </div>
+                    <ExpiryCountdown
+                      daysLeft={item.daysLeft}
+                      expiryLabel={item.expiryLabel}
+                      isExpired={item.isExpired}
+                      compact
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Activity Timeline Card */}
           <Card className="p-6 bg-white shadow-soft border border-slate-100">
             <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100 mb-4">
               <Activity size={18} className="text-teal-700" />

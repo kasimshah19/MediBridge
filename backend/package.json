@@ -9,6 +9,7 @@
     "start": "cross-env NODE_ENV=production node src/server.js",
     "seed:admin": "node src/scripts/seedAdmin.js",
     "list:collections": "node src/scripts/listCollections.js",
+    "dev:set-expiry": "node src/scripts/devSetExpiry.js",
     "test": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --detectOpenHandles"
   },
   "keywords": [
@@ -32,6 +33,7 @@
     "file-type": "^16.5.4",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "luxon": "^3.7.2",
     "mongoose": "^8.12.1",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",

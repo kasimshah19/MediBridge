@@ -21,6 +21,15 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('7d'),
   CLIENT_URL: z.string().default('http://localhost:5173'),
   CRON_SECRET: z.string().optional(),
+  ENABLE_INTERNAL_CRON: z
+    .string()
+    .default('true')
+    .transform((val) => val === 'true'),
+  EXPIRY_CRON_SCHEDULE: z.string().default('10 0 * * *'),
+  ALLOW_DEV_TIME_TRAVEL: z
+    .string()
+    .default('false')
+    .transform((val) => val === 'true'),
 
   // Admin Seeding credentials
   ADMIN_NAME: z.string().default('System Administrator'),
@@ -55,5 +64,20 @@ if (!parsed.success) {
 }
 
 const env = parsed.data;
+
+// In production, ensure CRON_SECRET is not a placeholder and at least 24 characters
+if (env.NODE_ENV === 'production') {
+  if (
+    !env.CRON_SECRET ||
+    env.CRON_SECRET.toLowerCase().includes('change_this') ||
+    env.CRON_SECRET.toLowerCase().includes('placeholder') ||
+    env.CRON_SECRET.length < 24
+  ) {
+    console.error(
+      '❌ Fatal: CRON_SECRET must be configured with a secure random string of at least 24 characters in production.'
+    );
+    process.exit(1);
+  }
+}
 
 export default env;

@@ -1,108 +1,601 @@
-import { PRIORITY_LEVELS } from '../config/constants.js';
+import mongoose from 'mongoose';
+import {
+  PRIORITY_LEVELS,
+  EXPIRY_THRESHOLDS,
+  ALERT_DAYS,
+  TRACKED_STATUSES,
+  MEDICINE_STATUS,
+  DONATION_STATUS,
+  AUDIT_ACTIONS,
+  NOTIFICATION_TYPES,
+  ROLES,
+} from '../config/constants.js';
+import Medicine from '../models/Medicine.js';
+import Donation from '../models/Donation.js';
+import JobRun from '../models/JobRun.js';
+import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+import ApiError from '../utils/ApiError.js';
+import recordAuditLog from './audit.service.js';
+import { sendExpiryAlertEmail } from './email.service.js';
+import {
+  nowIST,
+  startOfDayIST,
+  calendarDaysBetweenIST,
+  endOfMonthIST,
+  normalizeExpiryDate,
+} from '../utils/dates.js';
+
+export { normalizeExpiryDate, endOfMonthIST, startOfDayIST, calendarDaysBetweenIST };
 
 /**
- * Normalizes an expiry date to the exact LAST millisecond of that month
- * in Asia/Kolkata time zone (UTC+05:30).
+ * Calculates calendar days remaining until expiry in Asia/Kolkata timezone.
  *
- * e.g. "2026-11" or new Date("2026-11-15") -> 2026-11-30T23:59:59.999+05:30 (18:29:59.999Z)
- *
- * @param {string|Date} input - "YYYY-MM", "MM/YYYY", ISO date string, or Date object
- * @returns {Date} Normalized Date object
+ * @param {Date|string} expiryDate
+ * @param {Date|string} [now=new Date()]
+ * @returns {number}
  */
-export const normalizeExpiryDate = (input) => {
-  if (!input) return null;
-
-  let year;
-  let month; // 1-12
-
-  if (typeof input === 'string') {
-    const trimmed = input.trim();
-    if (/^\d{4}-\d{2}$/.test(trimmed)) {
-      // YYYY-MM
-      const [y, m] = trimmed.split('-').map(Number);
-      year = y;
-      month = m;
-    } else if (/^\d{1,2}\/\d{4}$/.test(trimmed)) {
-      // MM/YYYY
-      const [m, y] = trimmed.split('/').map(Number);
-      year = y;
-      month = m;
-    } else {
-      // Try generic Date parsing
-      const parsed = new Date(trimmed);
-      if (isNaN(parsed.getTime())) return null;
-      // Get year and month in IST (+05:30)
-      const istOffsetMs = 5.5 * 60 * 60 * 1000;
-      const istDate = new Date(parsed.getTime() + istOffsetMs);
-      year = istDate.getUTCFullYear();
-      month = istDate.getUTCMonth() + 1;
-    }
-  } else if (input instanceof Date) {
-    if (isNaN(input.getTime())) return null;
-    const istOffsetMs = 5.5 * 60 * 60 * 1000;
-    const istDate = new Date(input.getTime() + istOffsetMs);
-    year = istDate.getUTCFullYear();
-    month = istDate.getUTCMonth() + 1;
-  } else {
-    return null;
-  }
-
-  // Last day of month: day 0 of month + 1
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-
-  // Create date at 23:59:59.999 IST
-  // In UTC: 23:59:59.999 - 05:30 = 18:29:59.999
-  const utcDate = new Date(Date.UTC(year, month - 1, lastDay, 18, 29, 59, 999));
-  return utcDate;
+export const getDaysLeft = (expiryDate, now = new Date()) => {
+  return calendarDaysBetweenIST(now, expiryDate);
 };
 
 /**
- * Calculates remaining days between an expiry date and a reference date (default: now).
- * Uses whole days.
- *
- * @param {Date|string} expiryDate
- * @param {Date|string} [referenceDate=new Date()]
- * @returns {number} Days remaining (can be negative if expired)
+ * Backward compatibility alias for calculateRemainingDays from Phase 3.
  */
-export const calculateRemainingDays = (expiryDate, referenceDate = new Date()) => {
-  const expiry = expiryDate instanceof Date ? expiryDate : new Date(expiryDate);
-  const ref = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
-
-  if (isNaN(expiry.getTime()) || isNaN(ref.getTime())) return 0;
-
-  const diffMs = expiry.getTime() - ref.getTime();
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+export const calculateRemainingDays = (expiryDate, now = new Date()) => {
+  return getDaysLeft(expiryDate, now);
 };
 
 /**
- * Calculates medicine priority based on remaining days of shelf life.
- *
- * > 180 days       -> normal
- * 91 to 180 days   -> medium
- * 31 to 90 days    -> high
- * <= 30 days       -> critical
+ * Checks if a medicine has expired.
+ * A medicine is considered expired once the reference time passes the expiryDate
+ * (which is stored at 23:59:59.999 IST on the last day of the printed month).
  *
  * @param {Date|string} expiryDate
- * @param {Date|string} [referenceDate=new Date()]
+ * @param {Date|string} [now=new Date()]
+ * @returns {boolean}
+ */
+export const isExpired = (expiryDate, now = new Date()) => {
+  if (!expiryDate) return false;
+  const exp = expiryDate instanceof Date ? expiryDate : new Date(expiryDate);
+  const ref = now instanceof Date ? now : new Date(now);
+  if (isNaN(exp.getTime()) || isNaN(ref.getTime())) return false;
+  return ref.getTime() > exp.getTime();
+};
+
+/**
+ * Calculates priority based on remaining days of shelf life in Asia/Kolkata:
+ * normal > 180, medium 91-180, high 31-90, critical 0-30.
+ *
+ * @param {Date|string} expiryDate
+ * @param {Date|string} [now=new Date()]
  * @returns {'normal'|'medium'|'high'|'critical'}
  */
-export const calculatePriority = (expiryDate, referenceDate = new Date()) => {
-  const remainingDays = calculateRemainingDays(expiryDate, referenceDate);
+export const calculatePriority = (expiryDate, now = new Date()) => {
+  const daysLeft = getDaysLeft(expiryDate, now);
 
-  if (remainingDays > 180) {
+  if (daysLeft > EXPIRY_THRESHOLDS.medium) {
     return PRIORITY_LEVELS.NORMAL;
   }
-  if (remainingDays >= 91) {
+  if (daysLeft > EXPIRY_THRESHOLDS.high) {
     return PRIORITY_LEVELS.MEDIUM;
   }
-  if (remainingDays >= 31) {
+  if (daysLeft > EXPIRY_THRESHOLDS.critical) {
     return PRIORITY_LEVELS.HIGH;
   }
   return PRIORITY_LEVELS.CRITICAL;
 };
 
+/**
+ * Generates a human-friendly label for medicine expiry.
+ *
+ * @param {number} daysLeft
+ * @param {boolean} expired
+ * @returns {string}
+ */
+export const getExpiryLabel = (daysLeft, expired) => {
+  if (expired) {
+    const absDays = Math.abs(daysLeft);
+    if (absDays <= 1) {
+      return 'Expired yesterday';
+    }
+    return `Expired ${absDays} days ago`;
+  }
+  if (daysLeft === 0) {
+    return 'Expires today';
+  }
+  if (daysLeft === 1) {
+    return '1 day left';
+  }
+  return `${daysLeft} days left`;
+};
+
+/**
+ * Decorates a medicine document/object with live computed fields:
+ * { daysLeft, isExpired, effectivePriority, expiryLabel }
+ *
+ * @param {object} medicine
+ * @param {Date|string} [now=new Date()]
+ * @returns {object}
+ */
+export const decorateMedicine = (medicine, now = new Date()) => {
+  if (!medicine) return null;
+  const raw = typeof medicine.toObject === 'function' ? medicine.toObject() : { ...medicine };
+
+  const daysLeft = getDaysLeft(raw.expiryDate, now);
+  const expired = isExpired(raw.expiryDate, now) || raw.status === MEDICINE_STATUS.EXPIRED;
+  const effectivePriority = calculatePriority(raw.expiryDate, now);
+  const expiryLabel = getExpiryLabel(daysLeft, expired);
+
+  return {
+    ...raw,
+    daysLeft,
+    isExpired: expired,
+    effectivePriority,
+    expiryLabel,
+  };
+};
+
+/**
+ * Asserts that a medicine is not expired, throwing ApiError 409 if expired.
+ * Exported for Phase 5 (pharmacist verification) and Phase 7 (handover).
+ *
+ * @param {object} medicine
+ * @param {Date|string} [now=new Date()]
+ */
+export const assertNotExpired = (medicine, now = new Date()) => {
+  if (!medicine) return;
+  if (isExpired(medicine.expiryDate, now) || medicine.status === MEDICINE_STATUS.EXPIRED) {
+    throw new ApiError(409, 'This medicine has expired and cannot be approved or transferred');
+  }
+};
+
+/**
+ * THE MAIN EXPIRY CHECK LOGIC
+ * Runs automated expiry and priority recalculation across all tracked medicines.
+ *
+ * @param {object} options
+ * @param {Date} [options.now=new Date()]
+ * @param {boolean} [options.dryRun=false]
+ * @param {'cron'|'github_actions'|'manual_admin'|'startup_catchup'} options.trigger
+ * @param {string|null} [options.triggeredBy=null]
+ * @returns {Promise<object>}
+ */
+export const runExpiryCheck = async ({
+  now = new Date(),
+  dryRun = false,
+  trigger = 'manual_admin',
+  triggeredBy = null,
+} = {}) => {
+  const startedAt = new Date();
+  const executionAsOf = now instanceof Date ? now : new Date(now);
+
+  // 1. Lock check: return 409 if another run is currently active and started < 10 mins ago
+  const tenMinutesAgo = new Date(startedAt.getTime() - 10 * 60 * 1000);
+  const activeLock = await JobRun.findOne({
+    name: 'expiry-check',
+    status: 'running',
+    startedAt: { $gte: tenMinutesAgo },
+  });
+
+  if (activeLock) {
+    return {
+      skipped: true,
+      reason: 'already_running',
+      jobRunId: activeLock._id,
+    };
+  }
+
+  // Mark older stale running jobs as failed
+  await JobRun.updateMany(
+    {
+      name: 'expiry-check',
+      status: 'running',
+      startedAt: { $lt: tenMinutesAgo },
+    },
+    {
+      $set: {
+        status: 'failed',
+        error: 'Job timed out or crashed; marked stale automatically',
+        finishedAt: startedAt,
+      },
+    }
+  );
+
+  // 2. Create JobRun
+  const jobRun = await JobRun.create({
+    name: 'expiry-check',
+    trigger,
+    triggeredBy,
+    dryRun,
+    asOf: executionAsOf,
+    status: 'running',
+    startedAt,
+    stats: {
+      scanned: 0,
+      priorityChanged: 0,
+      newlyExpired: 0,
+      notificationsCreated: 0,
+      donationsAffected: 0,
+    },
+  });
+
+  try {
+    let scanned = 0;
+    let priorityChanged = 0;
+    let newlyExpired = 0;
+    let notificationsCreated = 0;
+    let donationsAffected = 0;
+
+    const sampleChanges = [];
+    const affectedDonationIds = new Set();
+
+    // Map: donorId -> { d90: [item], d30: [item], d7: [item], expired: [item] }
+    const donorAlertsMap = new Map();
+
+    // 3. Process tracked medicines using cursor in batches of 500
+    const cursor = Medicine.find({
+      status: { $in: TRACKED_STATUSES },
+    })
+      .select(
+        '_id medicineId name donorId donationId expiryDate status priority expiryAlerts statusHistory'
+      )
+      .lean()
+      .cursor({ batchSize: 500 });
+
+    const bulkOperations = [];
+
+    for await (const item of cursor) {
+      scanned++;
+      const daysLeft = getDaysLeft(item.expiryDate, executionAsOf);
+      const expired = isExpired(item.expiryDate, executionAsOf);
+      const newPriority = calculatePriority(item.expiryDate, executionAsOf);
+
+      const donorIdStr = item.donorId.toString();
+      if (!donorAlertsMap.has(donorIdStr)) {
+        donorAlertsMap.set(donorIdStr, {
+          d90: [],
+          d30: [],
+          d7: [],
+          expired: [],
+        });
+      }
+      const donorBucket = donorAlertsMap.get(donorIdStr);
+
+      if (expired) {
+        // Item is newly expired
+        newlyExpired++;
+        affectedDonationIds.add(item.donationId.toString());
+
+        if (sampleChanges.length < 50) {
+          sampleChanges.push({
+            medicineId: item.medicineId || item._id,
+            name: item.name,
+            fromPriority: item.priority,
+            toPriority: PRIORITY_LEVELS.CRITICAL,
+            fromStatus: item.status,
+            toStatus: MEDICINE_STATUS.EXPIRED,
+            daysLeft,
+          });
+        }
+
+        if (!dryRun) {
+          const updateFields = {
+            status: MEDICINE_STATUS.EXPIRED,
+            expiredAt: executionAsOf,
+            priority: PRIORITY_LEVELS.CRITICAL,
+            expiryCheckedAt: executionAsOf,
+          };
+
+          const alertUpdates = {};
+          if (!item.expiryAlerts?.expiredAt) {
+            alertUpdates['expiryAlerts.expiredAt'] = executionAsOf;
+            donorBucket.expired.push(item);
+          }
+
+          bulkOperations.push({
+            updateOne: {
+              filter: { _id: item._id, status: { $in: TRACKED_STATUSES } },
+              update: {
+                $set: { ...updateFields, ...alertUpdates },
+                $push: {
+                  statusHistory: {
+                    status: MEDICINE_STATUS.EXPIRED,
+                    note: 'Automatically marked expired by system',
+                    at: executionAsOf,
+                    by: null,
+                  },
+                },
+              },
+            },
+          });
+        }
+      } else {
+        // Not expired: recompute priority
+        const priorityHasChanged = item.priority !== newPriority;
+        if (priorityHasChanged) {
+          priorityChanged++;
+        }
+
+        // Check threshold crossing for notifications
+        let targetThreshold = null;
+        const currentAlerts = item.expiryAlerts || {};
+
+        if (daysLeft <= 7 && !currentAlerts.d7At) {
+          targetThreshold = 'd7';
+        } else if (daysLeft <= 30 && !currentAlerts.d30At) {
+          targetThreshold = 'd30';
+        } else if (daysLeft <= 90 && !currentAlerts.d90At) {
+          targetThreshold = 'd90';
+        }
+
+        const alertUpdates = {};
+        if (targetThreshold) {
+          if (targetThreshold === 'd7') {
+            alertUpdates['expiryAlerts.d7At'] = executionAsOf;
+            alertUpdates['expiryAlerts.d30At'] = currentAlerts.d30At || executionAsOf;
+            alertUpdates['expiryAlerts.d90At'] = currentAlerts.d90At || executionAsOf;
+            donorBucket.d7.push(item);
+          } else if (targetThreshold === 'd30') {
+            alertUpdates['expiryAlerts.d30At'] = executionAsOf;
+            alertUpdates['expiryAlerts.d90At'] = currentAlerts.d90At || executionAsOf;
+            donorBucket.d30.push(item);
+          } else if (targetThreshold === 'd90') {
+            alertUpdates['expiryAlerts.d90At'] = executionAsOf;
+            donorBucket.d90.push(item);
+          }
+        }
+
+        if (priorityHasChanged && sampleChanges.length < 50) {
+          sampleChanges.push({
+            medicineId: item.medicineId || item._id,
+            name: item.name,
+            fromPriority: item.priority,
+            toPriority: newPriority,
+            fromStatus: item.status,
+            toStatus: item.status,
+            daysLeft,
+          });
+        }
+
+        // Only update document if priority changed or alerts were stamped
+        if (!dryRun && (priorityHasChanged || Object.keys(alertUpdates).length > 0)) {
+          bulkOperations.push({
+            updateOne: {
+              filter: { _id: item._id },
+              update: {
+                $set: {
+                  priority: newPriority,
+                  expiryCheckedAt: executionAsOf,
+                  ...alertUpdates,
+                },
+              },
+            },
+          });
+        }
+      }
+
+      // Execute bulkWrite in chunks of 500
+      if (!dryRun && bulkOperations.length >= 500) {
+        await Medicine.bulkWrite(bulkOperations);
+        bulkOperations.length = 0;
+      }
+    }
+
+    // Flush any remaining bulk operations
+    if (!dryRun && bulkOperations.length > 0) {
+      await Medicine.bulkWrite(bulkOperations);
+      bulkOperations.length = 0;
+    }
+
+    // 4. Donation consequences for affected donations (where medicines expired)
+    if (!dryRun && affectedDonationIds.size > 0) {
+      for (const donationId of affectedDonationIds) {
+        const donation = await Donation.findById(donationId).populate('items');
+        if (!donation) continue;
+
+        // Check viable items in pending, approved, reserved
+        const viableItems = (donation.items || []).filter((med) =>
+          TRACKED_STATUSES.includes(med.status)
+        );
+
+        if (viableItems.length === 0) {
+          // All items expired: if in under_verification, more_info_required, or approved -> reject
+          if (
+            [
+              DONATION_STATUS.UNDER_VERIFICATION,
+              DONATION_STATUS.MORE_INFO_REQUIRED,
+              DONATION_STATUS.APPROVED,
+            ].includes(donation.status)
+          ) {
+            donation.status = DONATION_STATUS.REJECTED;
+            donation.rejectionReason = 'All medicines in this donation expired before handover';
+            donation.statusHistory.push({
+              status: DONATION_STATUS.REJECTED,
+              note: 'All medicines in this donation expired before handover',
+              at: executionAsOf,
+              by: null,
+            });
+            await donation.save();
+            donationsAffected++;
+
+            await recordAuditLog({
+              action: AUDIT_ACTIONS.DONATION_AUTO_CLOSED_EXPIRED,
+              actorType: 'system',
+              meta: {
+                donationId: donation._id,
+                donationCode: donation.donationCode,
+              },
+            });
+          }
+        } else {
+          // Some items remain viable: add status note
+          donation.statusHistory.push({
+            status: donation.status,
+            note: '1 or more medicines in this donation expired and were removed from circulation',
+            at: executionAsOf,
+            by: null,
+          });
+          await donation.save();
+          donationsAffected++;
+        }
+      }
+    } else if (dryRun) {
+      donationsAffected = affectedDonationIds.size;
+    }
+
+    // 5. Grouped Notifications per donor & per threshold
+    if (!dryRun) {
+      for (const [donorId, buckets] of donorAlertsMap.entries()) {
+        const donorUser = await User.findById(donorId);
+
+        // Expired items
+        if (buckets.expired.length > 0) {
+          const count = buckets.expired.length;
+          await Notification.create({
+            userId: donorId,
+            title: 'Medicines Expired',
+            message: `${count} of your medicine${count === 1 ? '' : 's'} have expired and been marked inactive.`,
+            type: NOTIFICATION_TYPES.EXPIRY_EXPIRED,
+            link: '/donor/expiry?priority=critical',
+          });
+          notificationsCreated++;
+
+          if (donorUser?.email) {
+            await sendExpiryAlertEmail({
+              to: donorUser.email,
+              name: donorUser.name,
+              count,
+              type: 'expired',
+            });
+          }
+        }
+
+        // Critical <= 7 days
+        if (buckets.d7.length > 0) {
+          const count = buckets.d7.length;
+          await Notification.create({
+            userId: donorId,
+            title: 'Urgent Expiry Alert',
+            message: `${count} of your medicine${count === 1 ? '' : 's'} expire within 7 days.`,
+            type: NOTIFICATION_TYPES.EXPIRY_CRITICAL,
+            link: '/donor/expiry?priority=critical',
+          });
+          notificationsCreated++;
+        }
+
+        // Critical <= 30 days
+        if (buckets.d30.length > 0) {
+          const count = buckets.d30.length;
+          await Notification.create({
+            userId: donorId,
+            title: 'Medicines Expiring Soon',
+            message: `${count} of your medicine${count === 1 ? '' : 's'} expire within 30 days.`,
+            type: NOTIFICATION_TYPES.EXPIRY_CRITICAL,
+            link: '/donor/expiry?priority=critical',
+          });
+          notificationsCreated++;
+
+          if (donorUser?.email) {
+            await sendExpiryAlertEmail({
+              to: donorUser.email,
+              name: donorUser.name,
+              count,
+              type: 'warning',
+            });
+          }
+        }
+
+        // Warning <= 90 days
+        if (buckets.d90.length > 0) {
+          const count = buckets.d90.length;
+          await Notification.create({
+            userId: donorId,
+            title: 'Shelf-Life Update',
+            message: `${count} of your medicine${count === 1 ? '' : 's'} expire within 90 days.`,
+            type: NOTIFICATION_TYPES.EXPIRY_WARNING,
+            link: '/donor/expiry?priority=high',
+          });
+          notificationsCreated++;
+        }
+      }
+
+      // Admin Summary notification if any item newly expired
+      if (newlyExpired > 0) {
+        const admins = await User.find({ role: ROLES.ADMIN }).select('_id');
+        for (const admin of admins) {
+          await Notification.create({
+            userId: admin._id,
+            title: 'Expiry Check Completed',
+            message: `Automated expiry check identified ${newlyExpired} newly expired medicine${newlyExpired === 1 ? '' : 's'}.`,
+            type: NOTIFICATION_TYPES.EXPIRY_EXPIRED,
+            link: '/admin/expiry?priority=critical',
+          });
+          notificationsCreated++;
+        }
+      }
+    }
+
+    const durationMs = Date.now() - startedAt.getTime();
+    const finalStats = {
+      scanned,
+      priorityChanged,
+      newlyExpired,
+      notificationsCreated,
+      donationsAffected,
+    };
+
+    jobRun.status = 'success';
+    jobRun.finishedAt = new Date();
+    jobRun.durationMs = durationMs;
+    jobRun.stats = finalStats;
+    await jobRun.save();
+
+    // Audit log
+    await recordAuditLog({
+      action: AUDIT_ACTIONS.EXPIRY_JOB_RUN,
+      actorType: 'system',
+      meta: {
+        jobRunId: jobRun._id,
+        trigger,
+        dryRun,
+        durationMs,
+        stats: finalStats,
+      },
+    });
+
+    return {
+      success: true,
+      jobRunId: jobRun._id,
+      dryRun,
+      stats: finalStats,
+      durationMs,
+      sampleChanges: dryRun ? sampleChanges : undefined,
+    };
+  } catch (err) {
+    const durationMs = Date.now() - startedAt.getTime();
+    jobRun.status = 'failed';
+    jobRun.finishedAt = new Date();
+    jobRun.durationMs = durationMs;
+    jobRun.error = err.message || 'Unknown expiry check failure';
+    await jobRun.save();
+
+    console.error('❌ Expiry check job failed:', err);
+    throw err;
+  }
+};
+
 export default {
-  normalizeExpiryDate,
+  getDaysLeft,
   calculateRemainingDays,
+  isExpired,
   calculatePriority,
+  getExpiryLabel,
+  decorateMedicine,
+  assertNotExpired,
+  runExpiryCheck,
+  normalizeExpiryDate,
+  endOfMonthIST,
+  startOfDayIST,
+  calendarDaysBetweenIST,
 };

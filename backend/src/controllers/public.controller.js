@@ -2,7 +2,13 @@ import asyncHandler from '../middleware/asyncHandler.js';
 import Organization from '../models/Organization.js';
 import User from '../models/User.js';
 import ApiResponse from '../utils/ApiResponse.js';
-import { ORG_STATUS, ROLES, APPROVAL_STATUS } from '../config/constants.js';
+import {
+  ORG_STATUS,
+  ROLES,
+  APPROVAL_STATUS,
+  EXPIRY_THRESHOLDS,
+  ALERT_DAYS,
+} from '../config/constants.js';
 import env from '../config/env.js';
 
 /**
@@ -76,6 +82,8 @@ export const getPublicConfig = asyncHandler(async (_req, res) => {
         minShelfLifeDays: env.MIN_REMAINING_SHELF_LIFE_DAYS,
         maxItems: env.MAX_ITEMS_PER_DONATION,
         maxPhotos: env.MAX_PHOTOS_PER_MEDICINE,
+        priorityThresholds: EXPIRY_THRESHOLDS,
+        alertDays: ALERT_DAYS,
       },
       'Public platform configuration retrieved successfully.'
     )

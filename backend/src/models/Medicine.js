@@ -136,6 +136,32 @@ const medicineSchema = new mongoose.Schema(
       enum: PRIORITY_LEVELS_ARRAY,
       default: PRIORITY_LEVELS.NORMAL,
     },
+    expiredAt: {
+      type: Date,
+      default: null,
+    },
+    expiryCheckedAt: {
+      type: Date,
+      default: null,
+    },
+    expiryAlerts: {
+      d90At: { type: Date, default: null },
+      d30At: { type: Date, default: null },
+      d7At: { type: Date, default: null },
+      expiredAt: { type: Date, default: null },
+    },
+    statusHistory: [
+      {
+        status: { type: String, required: true },
+        note: { type: String, default: '' },
+        at: { type: Date, default: Date.now },
+        by: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          default: null,
+        },
+      },
+    ],
     status: {
       type: String,
       enum: MEDICINE_STATUS_ARRAY,
@@ -182,6 +208,8 @@ medicineSchema.pre('save', function (next) {
 
 // Compound index for duplicate detection
 medicineSchema.index({ donorId: 1, nameLower: 1, batchNumber: 1, expiryDate: 1 });
+medicineSchema.index({ status: 1, expiryDate: 1 });
+medicineSchema.index({ priority: 1, status: 1 });
 
 const Medicine = mongoose.models.Medicine || mongoose.model('Medicine', medicineSchema);
 

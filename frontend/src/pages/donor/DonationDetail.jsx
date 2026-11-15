@@ -26,6 +26,8 @@ import Button from '../../components/ui/Button';
 import Spinner from '../../components/ui/Spinner';
 import Modal from '../../components/ui/Modal';
 import StatusBadge from '../../components/common/StatusBadge';
+import PriorityChip from '../../components/common/PriorityChip';
+import ExpiryCountdown from '../../components/common/ExpiryCountdown';
 import Lightbox from '../../components/ui/Lightbox';
 import { getDonationById, cancelDonation, getItemPhotoBlob } from '../../api/donation.api';
 import '../../utils/leafletSetup';
@@ -209,7 +211,11 @@ export default function DonationDetail() {
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {item.priority && <StatusBadge status={item.priority} size="xs" />}
+                        <PriorityChip
+                          priority={item.priority || item.effectivePriority}
+                          isExpired={item.isExpired}
+                          size="sm"
+                        />
                         <StatusBadge status={item.status} size="xs" />
                       </div>
                     </div>
@@ -224,14 +230,22 @@ export default function DonationDetail() {
                       </div>
                       <div>
                         <span className="block text-[10px] uppercase font-bold text-slate-400">
-                          Expiration
+                          Expiration & Shelf-Life
                         </span>
-                        <span className="font-medium text-slate-700">
-                          {new Date(item.expiryDate).toLocaleDateString('en-IN', {
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </span>
+                        <div className="flex flex-col gap-1 mt-0.5">
+                          <span className="font-medium text-slate-700">
+                            {new Date(item.expiryDate).toLocaleDateString('en-IN', {
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </span>
+                          <ExpiryCountdown
+                            daysLeft={item.daysLeft}
+                            expiryLabel={item.expiryLabel}
+                            isExpired={item.isExpired}
+                            compact
+                          />
+                        </div>
                       </div>
                       <div>
                         <span className="block text-[10px] uppercase font-bold text-slate-400">
@@ -250,6 +264,14 @@ export default function DonationDetail() {
                         </span>
                       </div>
                     </div>
+
+                    {/* Expired state notice */}
+                    {(item.isExpired || item.status === 'expired') && (
+                      <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
+                        <AlertCircle size={14} className="text-slate-500 shrink-0" />
+                        <span>This medicine reached expiration before distribution and was retired from active circulation.</span>
+                      </div>
+                    )}
 
                     {/* Screening Results if present */}
                     {item.screening?.status && item.screening.status !== 'not_checked' && (

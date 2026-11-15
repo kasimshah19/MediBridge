@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck, Clock, ExternalLink } from 'lucide-react';
+import {
+  Bell,
+  CheckCheck,
+  Clock,
+  ExternalLink,
+  AlertTriangle,
+  AlertCircle,
+  XCircle,
+} from 'lucide-react';
 import {
   getNotifications,
   markNotificationAsRead,
@@ -158,11 +166,23 @@ export default function NotificationsBell() {
                     !notif.isRead ? 'bg-teal-50/20' : ''
                   }`}
                 >
-                  <div className="mt-1 flex-shrink-0">
-                    {!notif.isRead ? (
-                      <span className="w-2 h-2 rounded-full bg-teal-600 block shadow-sm" />
+                  <div className="mt-0.5 flex-shrink-0">
+                    {notif.type === 'expiry_expired' ? (
+                      <span className="p-1 rounded-md bg-slate-100 text-slate-700 block">
+                        <XCircle size={13} />
+                      </span>
+                    ) : notif.type === 'expiry_critical' ? (
+                      <span className="p-1 rounded-md bg-rose-100 text-rose-600 block">
+                        <AlertTriangle size={13} />
+                      </span>
+                    ) : notif.type === 'expiry_warning' ? (
+                      <span className="p-1 rounded-md bg-amber-100 text-amber-600 block">
+                        <AlertCircle size={13} />
+                      </span>
+                    ) : !notif.isRead ? (
+                      <span className="w-2 h-2 rounded-full bg-teal-600 block shadow-sm mt-1" />
                     ) : (
-                      <span className="w-2 h-2 rounded-full bg-slate-200 block" />
+                      <span className="w-2 h-2 rounded-full bg-slate-200 block mt-1" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

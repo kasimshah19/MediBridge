@@ -44,7 +44,7 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
     },
   ];
 
-  // Admin active navigation for Phase 2
+  // Admin active navigation
   if (user.role === 'admin') {
     primaryNav.push(
       {
@@ -58,6 +58,12 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
         path: '/admin/pharmacists',
         icon: Stethoscope,
         active: location.pathname.startsWith('/admin/pharmacists'),
+      },
+      {
+        name: 'Expiry Tracker',
+        path: '/admin/expiry',
+        icon: Clock,
+        active: location.pathname.startsWith('/admin/expiry'),
       }
     );
   }
@@ -72,9 +78,11 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
     });
   }
 
-  // Donor active navigation for Phase 3
+  // Donor active navigation
   if (user.role === 'donor') {
-    primaryNav.splice(1, 0,
+    primaryNav.splice(
+      1,
+      0,
       {
         name: 'Donate Medicines',
         path: '/donor/donate',
@@ -86,6 +94,12 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
         path: '/donor/donations',
         icon: Heart,
         active: location.pathname.startsWith('/donor/donations'),
+      },
+      {
+        name: 'Expiry Tracker',
+        path: '/donor/expiry',
+        icon: Clock,
+        active: location.pathname.startsWith('/donor/expiry'),
       }
     );
   }
@@ -93,7 +107,6 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
   // Role-specific roadmap features (planned for subsequent phases)
   const roleUpcoming = {
     donor: [
-      { name: 'Medicine Expiry Tracker', icon: Clock, phase: 'Phase 4' },
       { name: 'QR Handover Tracking', icon: QrCode, phase: 'Phase 7' },
     ],
     pharmacist: [

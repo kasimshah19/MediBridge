@@ -184,7 +184,7 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 | 1     | ✅ Auth & Roles                   | **Complete**  |
 | 2     | ✅ Landing Page & Org Onboarding  | **Complete**  |
 | 3     | ✅ Donation Submission & Screening | **Complete**  |
-| 4     | Expiry Tracker                    | Planned       |
+| 4     | ✅ Expiry Tracker & Scheduled Jobs | **Complete**  |
 | 5     | Pharmacist Verification           | Planned       |
 | 6     | Geo Matching & Requests           | Planned       |
 | 7     | QR & Chain of Custody             | Planned       |
@@ -192,7 +192,17 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 
 ---
 
-## 📡 API Endpoints (Phases 1, 2 & 3)
+## 📡 API Endpoints (Phases 1, 2, 3 & 4)
+
+### Expiry Tracker (`/api/expiry` — Protected; Scope-Aware)
+- `GET /summary` — Real computed counts for user scope (`normal`, `medium`, `high`, `critical`, `expiredTotal`, `expiringIn7Days`, `totalTracked`)
+- `GET /items` — Paginated list of medicines with computed fields (`daysLeft`, `isExpired`, `priority`, `expiryLabel`, `donationCode`)
+- `GET /timeline` — 12-month projected monthly expiry counts grouped by priority
+
+### Internal & Admin Scheduled Jobs
+- `POST /api/internal/jobs/expiry` — Protected webhook for GitHub Actions / external cron (requires `x-cron-secret` header, supports `dryRun` and dev `asOf`)
+- `GET /api/admin/jobs/expiry` — Admin job run history (last 10 executions, next scheduled run, cron status)
+- `POST /api/admin/jobs/expiry/run` — Admin manual trigger for dry run or real execution
 
 ### Auth (`/api/auth`)
 - `POST /register` — Register donor, pharmacist, or NGO account
@@ -246,6 +256,61 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 - `GET /stats` — Real platform statistics (verified orgs, registered donors, verified pharmacists, cities)
 - `GET /organizations` — Directory of verified organizations with sanitized public fields
 - `GET /config` — Platform policy configuration (`minShelfLifeDays`, `maxItems`, `maxPhotos`)
+
+---
+
+## ⏱️ Expiry Tracker & Scheduled Job Architecture
+
+MediBridge implements a multi-path, fault-tolerant automated medicine shelf-life tracking system:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 Three Trigger Mechanisms                    │
+├──────────────────────────┬──────────────────────────────────┤
+│ 1. Internal node-cron    │ Daily at 00:10 IST in server.js  │
+│ 2. GitHub Actions Webhook│ Daily at 00:05 IST via curl retry│
+│ 3. Startup Catch-Up      │ Automatically runs on boot if no │
+│                          │ run succeeded in past 24 hours   │
+└──────────────────────────┴──────────────────────────────────┘
+                            │
+                            ▼
+              ┌───────────────────────────┐
+              │ 10-Minute Concurrency Lock│
+              │  (JobRun active check)    │
+              └─────────────┬─────────────┘
+                            │
+                            ▼
+              ┌───────────────────────────┐
+              │  MongoDB Cursor Batching  │
+              │ (500 items, bulkWrite,    │
+              │   100% idempotent updates)│
+              └─────────────┬─────────────┘
+                            │
+       ┌────────────────────┼────────────────────┐
+       ▼                    ▼                    ▼
+[Priority Recalculation] [Auto-Expiration]   [Grouped Alerts]
+Normal: >180 days        Marked 'expired'    1 alert per donor
+Medium: 91-180 days      Donation consequence:  per threshold
+High:   31-90 days       auto-rejected if all (90d, 30d, 7d,
+Critical: 0-30 days      items expired       expired)
+```
+
+### GitHub Actions Secrets Configuration
+
+When deploying or configuring GitHub Actions, add these repository secrets (**Settings** > **Secrets and variables** > **Actions**):
+- `BACKEND_URL`: The production API base URL without trailing slash and without `/api` (e.g. `https://api.medibridge.org`).
+- `CRON_SECRET`: Secure string matching `CRON_SECRET` in backend `.env` (minimum 24 characters in production).
+
+### Developer Expiry Override & Time Travel
+
+Because submitted medicines must pass the minimum shelf-life screening threshold (default 90 days), developer utilities allow overriding dates for test verification:
+```bash
+# Override a medicine's expiration to test priority shifts:
+npm run dev:set-expiry -- <medicineId> <daysLeft>
+npm run dev:set-expiry -- MED-2026-000001 20   # Critical (20 days left)
+npm run dev:set-expiry -- MED-2026-000001 -1   # Expired yesterday
+```
+In non-production environments with `ALLOW_DEV_TIME_TRAVEL=true`, endpoints accept `asOf` dates to simulate historical or future expiry runs without modifying system clocks.
 
 ---
 

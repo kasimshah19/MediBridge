@@ -12,6 +12,8 @@ import adminRoutes from './admin.routes.js';
 import notificationRoutes from './notification.routes.js';
 import geocodeRoutes from './geocode.routes.js';
 import publicRoutes from './public.routes.js';
+import expiryRoutes from './expiry.routes.js';
+import internalRoutes from './internal.routes.js';
 
 const router = Router();
 
@@ -29,5 +31,7 @@ router.use('/admin', adminRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/geocode', geocodeRoutes);
 router.use('/public', publicRoutes);
+router.use('/expiry', expiryRoutes);
+router.use('/internal', internalRoutes);
 
 export default router;

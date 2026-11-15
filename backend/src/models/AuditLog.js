@@ -9,6 +9,12 @@ const auditLogSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    actorType: {
+      type: String,
+      enum: ['user', 'system'],
+      default: 'user',
+      index: true,
+    },
     action: {
       type: String,
       enum: AUDIT_ACTIONS_ARRAY,

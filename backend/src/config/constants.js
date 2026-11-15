@@ -227,6 +227,37 @@ export const PRIORITY_LEVELS = {
 
 export const PRIORITY_LEVELS_ARRAY = Object.values(PRIORITY_LEVELS);
 
+// Phase 4: Expiry thresholds in days (Asia/Kolkata calendar days)
+export const EXPIRY_THRESHOLDS = {
+  medium: 180,
+  high: 90,
+  critical: 30,
+};
+
+// Days before expiry to trigger alert notifications
+export const ALERT_DAYS = [90, 30, 7];
+
+// Statuses of medicines that are actively tracked for expiry
+export const TRACKED_STATUSES = [
+  MEDICINE_STATUS.PENDING,
+  MEDICINE_STATUS.APPROVED,
+  MEDICINE_STATUS.RESERVED,
+];
+
+// Notification types
+export const NOTIFICATION_TYPES = {
+  SYSTEM: 'system',
+  VERIFICATION: 'verification',
+  DONATION: 'donation',
+  TRANSFER: 'transfer',
+  ALERT: 'alert',
+  EXPIRY_WARNING: 'expiry_warning',
+  EXPIRY_CRITICAL: 'expiry_critical',
+  EXPIRY_EXPIRED: 'expiry_expired',
+};
+
+export const NOTIFICATION_TYPES_ARRAY = Object.values(NOTIFICATION_TYPES);
+
 // Verification decision
 export const VERIFICATION_DECISION = {
   APPROVED: 'approved',
@@ -284,6 +315,9 @@ export const AUDIT_ACTIONS = {
   DONATION_SCREENING_REJECTED: 'DONATION_SCREENING_REJECTED',
   DONATION_CANCELLED: 'DONATION_CANCELLED',
   DONATION_DELETED: 'DONATION_DELETED',
+  EXPIRY_JOB_RUN: 'EXPIRY_JOB_RUN',
+  MEDICINE_AUTO_EXPIRED: 'MEDICINE_AUTO_EXPIRED',
+  DONATION_AUTO_CLOSED_EXPIRED: 'DONATION_AUTO_CLOSED_EXPIRED',
 };
 
 export const AUDIT_ACTIONS_ARRAY = Object.values(AUDIT_ACTIONS);

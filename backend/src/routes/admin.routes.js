@@ -11,6 +11,8 @@ import { protect } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { reviewOrgSchema, reviewUserSchema } from '../validators/admin.validator.js';
+import { runJobSchema } from '../validators/expiry.validator.js';
+import { getAdminJobRuns, runAdminExpiryCheck } from '../controllers/expiry.controller.js';
 import { ROLES } from '../config/constants.js';
 
 const router = Router();
@@ -28,5 +30,9 @@ router.patch('/organizations/:id/review', validate(reviewOrgSchema), reviewOrgan
 // User / Pharmacist management
 router.get('/users', getUsers);
 router.patch('/users/:id/review', validate(reviewUserSchema), reviewUser);
+
+// Expiry scheduled job management
+router.get('/jobs/expiry', getAdminJobRuns);
+router.post('/jobs/expiry/run', validate(runJobSchema), runAdminExpiryCheck);
 
 export default router;

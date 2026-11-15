@@ -11,7 +11,13 @@ import AuditLog from '../models/AuditLog.js';
  * @param {import('express').Request} [params.req] - Express request to extract IP & user-agent
  * @param {object} [params.meta] - Additional metadata
  */
-export const recordAuditLog = async ({ userId = null, action, req = null, meta = {} }) => {
+export const recordAuditLog = async ({
+  userId = null,
+  action,
+  actorType = 'user',
+  req = null,
+  meta = {},
+}) => {
   // If database is not connected (e.g. during offline unit tests), skip buffer timeout
   if (mongoose.connection.readyState !== 1) {
     return;
@@ -28,6 +34,7 @@ export const recordAuditLog = async ({ userId = null, action, req = null, meta =
 
     await AuditLog.create({
       userId,
+      actorType,
       action,
       ip,
       userAgent,
