@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   User,
   Heart,
+  Package,
   PackagePlus,
   Clock,
   ClipboardCheck,
@@ -80,6 +81,12 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
         path: '/admin/verification',
         icon: ClipboardCheck,
         active: location.pathname.startsWith('/admin/verification'),
+      },
+      {
+        name: 'Handovers & Custody',
+        path: '/admin/handovers',
+        icon: ShieldCheck,
+        active: location.pathname.startsWith('/admin/handovers'),
       }
     );
   }
@@ -132,6 +139,18 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
         active: location.pathname.startsWith('/ngo/matches'),
       },
       {
+        name: 'Handovers',
+        path: '/ngo/handovers',
+        icon: Package,
+        active: location.pathname === '/ngo/handovers' || location.pathname.startsWith('/ngo/handovers/'),
+      },
+      {
+        name: 'Scan Handover',
+        path: '/ngo/handover/scan',
+        icon: QrCode,
+        active: location.pathname.startsWith('/ngo/handover/scan'),
+      },
+      {
         name: 'Organization Profile',
         path: '/ngo/onboarding',
         icon: Building2,
@@ -170,6 +189,12 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
         active: location.pathname.startsWith('/donor/matches'),
       },
       {
+        name: 'Handovers',
+        path: '/donor/handovers',
+        icon: Package,
+        active: location.pathname.startsWith('/donor/handovers'),
+      },
+      {
         name: 'Expiry Tracker',
         path: '/donor/expiry',
         icon: Clock,
@@ -180,15 +205,9 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
 
   // Role-specific roadmap features (planned for subsequent phases)
   const roleUpcoming = {
-    donor: [
-      { name: 'QR Handover Tracking', icon: QrCode, phase: 'Phase 7' },
-    ],
-    pharmacist: [
-      { name: 'QR Handover Tracking', icon: QrCode, phase: 'Phase 7' },
-    ],
-    ngo: [
-      { name: 'QR Handover Log', icon: QrCode, phase: 'Phase 7' },
-    ],
+    donor: [],
+    pharmacist: [],
+    ngo: [],
     admin: [
       { name: 'Platform Oversight', icon: Activity, phase: 'Phase 8' },
       { name: 'Audit & Compliance', icon: FileText, phase: 'Phase 8' },

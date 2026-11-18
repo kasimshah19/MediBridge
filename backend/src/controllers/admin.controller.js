@@ -6,10 +6,14 @@ import Notification from '../models/Notification.js';
 import AuditLog from '../models/AuditLog.js';
 import Claim from '../models/Claim.js';
 import Request from '../models/Request.js';
+import Transfer from '../models/Transfer.js';
+import Medicine from '../models/Medicine.js';
+import CustodyEvent from '../models/CustodyEvent.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import verificationService from '../services/verification.service.js';
 import { cancelClaim as cancelClaimService } from '../services/claim.service.js';
+import { buildTrace, verifyChain } from '../services/custody.service.js';
 import {
   sendOrgVerifiedEmail,
   sendOrgRejectedEmail,
@@ -25,6 +29,8 @@ import {
   DONATION_STATUS,
   CLAIM_STATUS,
   REQUEST_STATUS,
+  TRANSFER_STATUS,
+  MEDICINE_STATUS,
 } from '../config/constants.js';
 
 /**
@@ -661,6 +667,166 @@ export const getOrganizationsMap = asyncHandler(async (_req, res) => {
   );
 });
 
+/**
+ * List all transfers for admin overview.
+ * @route GET /api/admin/transfers
+ */
+export const getAdminTransfers = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = Math.min(parseInt(req.query.limit, 10) || 15, 50);
+  const skip = (page - 1) * limit;
+  const { status, search } = req.query;
+
+  const query = {};
+
+  if (status && status !== 'all') {
+    query.status = status;
+  }
+
+  if (search && search.trim()) {
+    const searchRegex = new RegExp(search.trim(), 'i');
+    const [matchingDonations, matchingOrgs, matchingUsers] = await Promise.all([
+      Donation.find({ donationCode: searchRegex }).select('_id'),
+      Organization.find({ name: searchRegex }).select('_id'),
+      User.find({ name: searchRegex }).select('_id'),
+    ]);
+
+    query.$or = [
+      { transferCode: searchRegex },
+      { donationId: { $in: matchingDonations.map((d) => d._id) } },
+      { organizationId: { $in: matchingOrgs.map((o) => o._id) } },
+      { donorId: { $in: matchingUsers.map((u) => u._id) } },
+    ];
+  }
+
+  const [transfers, total] = await Promise.all([
+    Transfer.find(query)
+      .populate('donationId', 'donationCode pickupAddress location')
+      .populate('organizationId', 'name city state')
+      .populate('donorId', 'name email phone')
+      .populate('claimId', 'claimCode')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Transfer.countDocuments(query),
+  ]);
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        transfers,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit),
+        },
+      },
+      'Admin transfers retrieved successfully.'
+    )
+  );
+});
+
+/**
+ * Get summary stats for all transfers.
+ * @route GET /api/admin/transfers/summary
+ */
+export const getAdminTransfersSummary = asyncHandler(async (_req, res) => {
+  const [
+    total,
+    scheduled,
+    partiallyCompleted,
+    completed,
+    cancelled,
+    medicinesTransferred,
+  ] = await Promise.all([
+    Transfer.countDocuments(),
+    Transfer.countDocuments({ status: TRANSFER_STATUS.SCHEDULED }),
+    Transfer.countDocuments({ status: TRANSFER_STATUS.PARTIALLY_COMPLETED }),
+    Transfer.countDocuments({ status: TRANSFER_STATUS.COMPLETED }),
+    Transfer.countDocuments({ status: TRANSFER_STATUS.CANCELLED }),
+    Medicine.countDocuments({ status: MEDICINE_STATUS.TRANSFERRED }),
+  ]);
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        total,
+        scheduled,
+        partiallyCompleted,
+        completed,
+        cancelled,
+        medicinesTransferred,
+      },
+      'Transfer summary statistics retrieved.'
+    )
+  );
+});
+
+/**
+ * Get unredacted custody trace for any medicine.
+ * @route GET /api/admin/custody/:medicineId
+ */
+export const getAdminCustodyTrace = asyncHandler(async (req, res) => {
+  const { medicineId } = req.params;
+
+  const medicine = await Medicine.findOne({
+    $or: [
+      { medicineId },
+      { _id: medicineId.match(/^[0-9a-fA-F]{24}$/) ? medicineId : null },
+    ],
+  });
+
+  if (!medicine) {
+    throw new ApiError(404, 'Medicine record not found.');
+  }
+
+  const trace = await buildTrace(medicine._id, ROLES.ADMIN);
+
+  res.status(200).json(new ApiResponse(200, trace, 'Admin custody trace retrieved.'));
+});
+
+/**
+ * Runs full cryptographic hash chain verification across all medicine custody chains.
+ * @route POST /api/admin/custody/verify
+ */
+export const verifyAllCustodyChains = asyncHandler(async (_req, res) => {
+  const distinctMedicineIds = await CustodyEvent.distinct('medicineId');
+
+  let validChains = 0;
+  const brokenChains = [];
+
+  for (const medId of distinctMedicineIds) {
+    const result = await verifyChain(medId);
+    if (result.valid) {
+      validChains++;
+    } else {
+      brokenChains.push({
+        medicineId: medId,
+        reason: result.reason,
+        eventSeq: result.eventSeq,
+      });
+    }
+  }
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalChains: distinctMedicineIds.length,
+        validChains,
+        brokenChainsCount: brokenChains.length,
+        brokenChains,
+      },
+      brokenChains.length === 0
+        ? 'All custody chains verified successfully. Cryptographic integrity confirmed.'
+        : `Custody integrity alert: ${brokenChains.length} chain(s) failed hash verification!`
+    )
+  );
+});
+
 export default {
   getOrganizations,
   getOrganizationById,
@@ -676,4 +842,8 @@ export default {
   cancelAdminClaim,
   getAdminRequirements,
   getOrganizationsMap,
+  getAdminTransfers,
+  getAdminTransfersSummary,
+  getAdminCustodyTrace,
+  verifyAllCustodyChains,
 };

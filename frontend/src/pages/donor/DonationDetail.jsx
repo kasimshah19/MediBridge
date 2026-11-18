@@ -25,6 +25,9 @@ import {
   Check,
   HeartHandshake,
   Building2,
+  QrCode,
+  Download,
+  Printer,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Card from '../../components/ui/Card';
@@ -37,6 +40,8 @@ import PriorityChip from '../../components/common/PriorityChip';
 import ExpiryCountdown from '../../components/common/ExpiryCountdown';
 import Lightbox from '../../components/ui/Lightbox';
 import HandoverDetailsDrawer from '../../components/matching/HandoverDetailsDrawer';
+import QrCodeCard from '../../components/common/QrCodeCard';
+import CustodyTimeline from '../../components/custody/CustodyTimeline';
 import {
   getDonationById,
   cancelDonation,
@@ -44,6 +49,8 @@ import {
   uploadItemPhoto,
   respondToClarification,
 } from '../../api/donation.api';
+import { downloadLabelsPdf } from '../../api/qr.api';
+import { getDonationCustody } from '../../api/custody.api';
 import '../../utils/leafletSetup';
 import { OSM_ATTRIBUTION } from '../../utils/leafletSetup';
 
@@ -229,6 +236,11 @@ export default function DonationDetail() {
   // Lightbox preview state
   const [lightboxState, setLightboxState] = useState({ isOpen: false, src: '', title: '' });
 
+  // Phase 7: Custody & Labels state
+  const [downloadingLabels, setDownloadingLabels] = useState(false);
+  const [custodyTrace, setCustodyTrace] = useState(null);
+  const [loadingCustody, setLoadingCustody] = useState(false);
+
   const fetchDetails = async () => {
     try {
       setLoading(true);
@@ -257,6 +269,38 @@ export default function DonationDetail() {
   useEffect(() => {
     fetchDetails();
   }, [id]);
+
+  useEffect(() => {
+    if (donation?._id) {
+      setLoadingCustody(true);
+      getDonationCustody(donation._id)
+        .then((res) => {
+          if (res?.success) setCustodyTrace(res.data);
+        })
+        .catch(() => {})
+        .finally(() => setLoadingCustody(false));
+    }
+  }, [donation?._id]);
+
+  const handleDownloadLabels = async () => {
+    try {
+      setDownloadingLabels(true);
+      const blob = await downloadLabelsPdf(donation._id);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `labels-${donation.donationCode || donation._id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Printable labels downloaded successfully.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to generate labels PDF.');
+    } finally {
+      setDownloadingLabels(false);
+    }
+  };
 
   const handleCancel = async () => {
     if (!cancelReason.trim() || cancelReason.trim().length < 5) {
@@ -327,6 +371,19 @@ export default function DonationDetail() {
         </div>
 
         <div className="flex items-center gap-2">
+          {['approved', 'matched', 'handed_over', 'completed'].includes(donation.status) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadLabels}
+              disabled={downloadingLabels}
+              className="text-xs text-teal-700 border-teal-200 hover:bg-teal-50"
+            >
+              <Printer size={13} className="mr-1.5" />
+              <span>{downloadingLabels ? 'Generating Labels...' : 'Download Labels (PDF)'}</span>
+            </Button>
+          )}
+
           {donation.status === 'draft' && (
             <Link to={`/donor/donate/${donation._id}`}>
               <Button variant="primary" size="sm" className="text-xs font-bold">
@@ -697,6 +754,90 @@ export default function DonationDetail() {
               })}
             </div>
           </Card>
+
+          {/* Phase 7: Verified Package QR Codes & Labels */}
+          {donation.items?.some(
+            (it) => it.medicineId && ['approved', 'matched', 'handed_over', 'completed'].includes(it.status)
+          ) && (
+            <Card className="p-6 bg-white border border-teal-100 shadow-soft space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center text-teal-700 shrink-0">
+                    <QrCode size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-heading font-bold text-text-heading">
+                      Package QR Codes & Verification Seals
+                    </h3>
+                    <p className="text-xs text-text-muted">
+                      Affix these cryptographic QR labels to individual medicine packages prior to physical handover.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleDownloadLabels}
+                  disabled={downloadingLabels}
+                  className="bg-teal-600 hover:bg-teal-700 text-xs shrink-0 font-semibold"
+                >
+                  <Printer size={13} className="mr-1.5" />
+                  <span>{downloadingLabels ? 'Generating...' : 'Print All Labels (PDF)'}</span>
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-1">
+                {donation.items
+                  .filter(
+                    (it) => it.medicineId && ['approved', 'matched', 'handed_over', 'completed'].includes(it.status)
+                  )
+                  .map((it) => (
+                    <QrCodeCard key={it.medicineId || it._id} medicine={it} />
+                  ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Phase 7: Cryptographic Chain of Custody */}
+          {custodyTrace?.medicines?.length > 0 && (
+            <Card className="p-6 bg-white border border-slate-200 shadow-soft space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-heading font-bold text-text-heading">
+                      Immutable Chain of Custody
+                    </h3>
+                    <p className="text-xs text-text-muted">
+                      Tamper-evident SHA-256 hash ledger verifying every event from submission to receipt.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6 pt-2">
+                {custodyTrace.medicines.map((med) => (
+                  <div key={med.medicineId} className="space-y-3">
+                    <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                      <span className="font-mono text-xs font-bold text-slate-800">
+                        {med.medicineCode || med.medicineId}
+                      </span>
+                      <span className="text-xs text-slate-500 font-medium">
+                        {med.events?.length || 0} Ledger Events
+                      </span>
+                    </div>
+                    <CustodyTimeline
+                      events={med.events || []}
+                      chainValid={med.valid}
+                      medicineId={med.medicineId}
+                    />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Pickup Address & Leaflet Map */}
           <Card className="p-6 bg-white border border-slate-200 shadow-soft space-y-4">

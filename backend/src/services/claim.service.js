@@ -20,11 +20,14 @@ import {
   MAX_RADIUS_KM,
   MAX_PENDING_CLAIMS_PER_ORG,
   CLAIM_RESPONSE_TTL_HOURS,
+  CUSTODY_EVENT_TYPES,
 } from '../config/constants.js';
 import { generateClaimCode } from '../utils/generateId.js';
 import { haversineKm } from '../utils/geo.js';
 import { recordAuditLog } from './audit.service.js';
 import { deriveDonationStatus } from './verification.service.js';
+import { recordEvent } from './custody.service.js';
+import { createTransferForClaim, cancelTransferForClaim } from './transfer.service.js';
 
 /**
  * Creates a new Claim (initiated by either an NGO or a Donor).
@@ -329,6 +332,19 @@ export const acceptClaim = async ({ claimId, user, note = '', req = null }) => {
     reservedMeds.push(medId);
   }
 
+  // Record MATCH_ACCEPTED custody event for each reserved medicine
+  for (const medId of reservedMeds) {
+    await recordEvent({
+      medicineId: medId,
+      eventType: CUSTODY_EVENT_TYPES.MATCH_ACCEPTED,
+      actorId: user._id,
+      actorRole: user.role,
+      data: {
+        claimCode: claim.claimCode,
+      },
+    });
+  }
+
   // Update claim status to accepted
   claim.status = CLAIM_STATUS.ACCEPTED;
   claim.respondedAt = now;
@@ -439,6 +455,9 @@ export const acceptClaim = async ({ claimId, user, note = '', req = null }) => {
       organizationId: claim.organizationId,
     },
   });
+
+  // Automatically schedule handover transfer
+  await createTransferForClaim(claim);
 
   return claim;
 };
@@ -587,8 +606,15 @@ export const cancelClaim = async ({
   const now = new Date();
   const wasAccepted = claim.status === CLAIM_STATUS.ACCEPTED;
 
-  // If was accepted, unreserve medicines
+  // If was accepted, cancel transfer (blocks with 409 if any item is already received) and unreserve medicines
   if (wasAccepted) {
+    await cancelTransferForClaim({
+      claimId: claim._id,
+      user,
+      reason,
+      req,
+    });
+
     await Medicine.updateMany(
       {
         _id: { $in: claim.medicineIds },

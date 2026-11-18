@@ -13,6 +13,8 @@
     "dev:set-location": "node src/scripts/devSetLocation.js",
     "geo:check": "node src/scripts/geoCheck.js",
     "verify:phase6": "node src/scripts/verifyPhase6.js",
+    "custody:verify": "node src/scripts/verifyCustody.js",
+    "backfill:phase7": "node src/scripts/backfillPhase7.js",
     "test": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --detectOpenHandles"
   },
   "keywords": [

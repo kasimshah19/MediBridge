@@ -128,6 +128,38 @@ export const getOrganizationsMap = async () => {
   return response.data;
 };
 
+/**
+ * Get all transfers for admin overview.
+ */
+export const getAdminTransfers = async (params = {}) => {
+  const response = await api.get('/admin/transfers', { params });
+  return response.data;
+};
+
+/**
+ * Get transfer summary counts.
+ */
+export const getAdminTransfersSummary = async () => {
+  const response = await api.get('/admin/transfers/summary');
+  return response.data;
+};
+
+/**
+ * Get unredacted custody trace for any medicine.
+ */
+export const getAdminCustodyTrace = async (medicineId) => {
+  const response = await api.get(`/admin/custody/${medicineId}`);
+  return response.data;
+};
+
+/**
+ * Run cryptographic verification check across all custody chains.
+ */
+export const verifyAllCustodyChains = async () => {
+  const response = await api.post('/admin/custody/verify');
+  return response.data;
+};
+
 export default {
   getAdminOrganizations,
   getAdminOrganizationById,
@@ -145,5 +177,9 @@ export default {
   cancelAdminClaim,
   getAdminRequirements,
   getOrganizationsMap,
+  getAdminTransfers,
+  getAdminTransfersSummary,
+  getAdminCustodyTrace,
+  verifyAllCustodyChains,
 };
 

@@ -47,6 +47,15 @@ const envSchema = z.object({
     ),
   DEFAULT_RADIUS_KM: z.string().default('10').transform(Number),
 
+  // QR & Chain of Custody (Phase 7)
+  QR_SIGNING_SECRET: z
+    .string()
+    .default('medibridge_qr_signing_secret_dev_key_32bytes_long!!'),
+  HANDOVER_TOKEN_TTL_MINUTES: z.string().default('15').transform(Number),
+  HANDOVER_REMINDER_DAYS: z.string().default('3').transform(Number),
+  HANDOVER_AUTO_CANCEL_DAYS: z.string().default('14').transform(Number),
+  HANDOVER_TOKEN_MAX_ATTEMPTS: z.string().default('5').transform(Number),
+
   // Admin Seeding credentials
   ADMIN_NAME: z.string().default('System Administrator'),
   ADMIN_EMAIL: z.string().email().default('admin@medibridge.local'),
@@ -81,7 +90,7 @@ if (!parsed.success) {
 
 const env = parsed.data;
 
-// In production, ensure CRON_SECRET is not a placeholder and at least 24 characters
+// In production, ensure CRON_SECRET and QR_SIGNING_SECRET are not placeholders and meet length requirements
 if (env.NODE_ENV === 'production') {
   if (
     !env.CRON_SECRET ||
@@ -91,6 +100,19 @@ if (env.NODE_ENV === 'production') {
   ) {
     console.error(
       '❌ Fatal: CRON_SECRET must be configured with a secure random string of at least 24 characters in production.'
+    );
+    process.exit(1);
+  }
+
+  if (
+    !env.QR_SIGNING_SECRET ||
+    env.QR_SIGNING_SECRET.toLowerCase().includes('change_this') ||
+    env.QR_SIGNING_SECRET.toLowerCase().includes('placeholder') ||
+    env.QR_SIGNING_SECRET.toLowerCase().includes('replace_with') ||
+    env.QR_SIGNING_SECRET.length < 32
+  ) {
+    console.error(
+      '❌ Fatal: QR_SIGNING_SECRET must be configured with a secure random string of at least 32 characters in production.'
     );
     process.exit(1);
   }

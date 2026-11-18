@@ -15,6 +15,7 @@ import {
   REJECTION_REASON_LABELS,
   CLAIM_STATUS,
   CLAIM_INITIATOR,
+  CUSTODY_EVENT_TYPES,
 } from '../config/constants.js';
 import env from '../config/env.js';
 import ApiError from '../utils/ApiError.js';
@@ -25,6 +26,8 @@ import { calculatePriority, normalizeExpiryDate, decorateMedicine } from '../ser
 import storageService from '../services/storage.service.js';
 import verificationService from '../services/verification.service.js';
 import { findNearbyOrganizationsForDonation } from '../services/geo.service.js';
+import { recordEvent, isDbConnected } from '../services/custody.service.js';
+import { generateLabelsPdf } from '../services/pdf.service.js';
 
 /**
  * Helper to attach donor-safe verification summary to medicine items.
@@ -941,6 +944,30 @@ export const submitDonation = async (req, res, next) => {
 
       await med.save();
       screenedMedicines.push(med);
+
+      // Record Custody Events: SUBMITTED and AUTO_SCREENED
+      await recordEvent({
+        medicineId: med._id,
+        eventType: CUSTODY_EVENT_TYPES.SUBMITTED,
+        actorId: donorId,
+        actorRole: ROLES.DONOR,
+        data: {
+          donationCode: donation.donationCode || 'DRAFT',
+          quantity: med.quantity,
+          unit: med.unit,
+        },
+      });
+
+      await recordEvent({
+        medicineId: med._id,
+        eventType: CUSTODY_EVENT_TYPES.AUTO_SCREENED,
+        actorId: null,
+        actorRole: 'system',
+        data: {
+          result: screeningResult.status,
+          reasons: (screeningResult.reasons || []).map((r) => r.code),
+        },
+      });
     }
 
     // Assign donation code if not yet set
@@ -1069,6 +1096,27 @@ export const cancelDonation = async (req, res, next) => {
       at: new Date(),
     });
 
+    // Record DONOR_CANCELLED custody events for pending items
+    if (isDbConnected()) {
+      try {
+        const pendingMeds = await Medicine.find({
+          donationId: donation._id,
+          status: MEDICINE_STATUS.PENDING,
+        });
+        if (Array.isArray(pendingMeds)) {
+          for (const med of pendingMeds) {
+            await recordEvent({
+              medicineId: med._id,
+              eventType: CUSTODY_EVENT_TYPES.DONOR_CANCELLED,
+              actorId: donorId,
+              actorRole: ROLES.DONOR,
+              data: { reason },
+            });
+          }
+        }
+      } catch {}
+    }
+
     // Mark pending items as rejected with source donor_cancelled
     await Medicine.updateMany(
       { donationId: donation._id, status: MEDICINE_STATUS.PENDING },
@@ -1123,6 +1171,51 @@ export const respondToMoreInfo = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/donations/:id/labels.pdf - Download 2x4 printable PDF label sheet for approved items.
+ */
+export const downloadLabelsPdf = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const donation = await Donation.findById(id).populate('items');
+    if (!donation) {
+      throw new ApiError(404, 'Donation record not found.');
+    }
+
+    const isOwner = donation.donorId.equals(req.user._id);
+    const isAdmin = req.user.role === ROLES.ADMIN;
+    const isApprovedPharmacist =
+      req.user.role === ROLES.PHARMACIST && req.user.approvalStatus === APPROVAL_STATUS.APPROVED;
+
+    if (!isOwner && !isAdmin && !isApprovedPharmacist) {
+      throw new ApiError(403, 'You do not have permission to download labels for this donation.');
+    }
+
+    const approvedItems = (donation.items || []).filter(
+      (item) =>
+        item.status === MEDICINE_STATUS.APPROVED ||
+        item.status === MEDICINE_STATUS.RESERVED ||
+        item.status === MEDICINE_STATUS.TRANSFERRED
+    );
+
+    if (approvedItems.length === 0) {
+      throw new ApiError(400, 'No approved medicines available to generate printable labels.');
+    }
+
+    const pdfBuffer = await generateLabelsPdf(donation, approvedItems);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="medibridge-labels-${donation.donationCode || id}.pdf"`
+    );
+    res.setHeader('Content-Length', pdfBuffer.length);
+    return res.send(pdfBuffer);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
   createDraftDonation,
   getMyDonations,
@@ -1137,4 +1230,5 @@ export default {
   cancelDonation,
   respondToMoreInfo,
   getNearbyOrganizationsForDonation,
+  downloadLabelsPdf,
 };

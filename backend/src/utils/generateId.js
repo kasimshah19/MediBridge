@@ -51,9 +51,18 @@ export const generateClaimCode = async (session = null) => {
   return generateSequentialId('CLM', session);
 };
 
+/**
+ * Generate a unique transfer handover code: TRF-YYYY-000001
+ * @param {import('mongoose').ClientSession} [session]
+ */
+export const generateTransferCode = async (session = null) => {
+  return generateSequentialId('TRF', session);
+};
+
 export default {
   generateSequentialId,
   generateDonationCode,
   generateMedicineId,
   generateClaimCode,
+  generateTransferCode,
 };

@@ -214,6 +214,7 @@ export const REJECTION_SOURCES = {
   AUTO_SCREENING: 'auto_screening',
   PHARMACIST: 'pharmacist',
   DONOR_CANCELLED: 'donor_cancelled',
+  RECEIVING_ORG: 'receiving_org',
 };
 
 export const REJECTION_SOURCES_ARRAY = Object.values(REJECTION_SOURCES);
@@ -267,6 +268,12 @@ export const NOTIFICATION_TYPES = {
   MATCH_CANCELLED: 'match_cancelled',
   MATCH_EXPIRED: 'match_expired',
   REQUIREMENT_FULFILLED: 'requirement_fulfilled',
+  HANDOVER_SCHEDULED: 'handover_scheduled',
+  HANDOVER_RECEIVED: 'handover_received',
+  HANDOVER_COMPLETED: 'handover_completed',
+  HANDOVER_ITEM_REJECTED: 'handover_item_rejected',
+  HANDOVER_REMINDER: 'handover_reminder',
+  HANDOVER_CANCELLED: 'handover_cancelled',
 };
 
 export const NOTIFICATION_TYPES_ARRAY = Object.values(NOTIFICATION_TYPES);
@@ -371,6 +378,7 @@ export const CLAIM_STATUS = {
   CANCELLED: 'cancelled',
   EXPIRED: 'expired',
   SUPERSEDED: 'superseded',
+  COMPLETED: 'completed',
 };
 
 export const CLAIM_STATUS_ARRAY = Object.values(CLAIM_STATUS);
@@ -393,17 +401,95 @@ export const MAX_OPEN_REQUIREMENTS_PER_ORG = 10;
 export const MAX_PENDING_CLAIMS_PER_ORG = 5;
 export const CLAIM_RESPONSE_TTL_HOURS = 72;
 
-// Transfer / chain of custody status
+// Transfer / chain of custody status (Phase 7)
 export const TRANSFER_STATUS = {
   SCHEDULED: 'scheduled',
-  PICKED_UP: 'picked_up',
-  IN_TRANSIT: 'in_transit',
-  DELIVERED: 'delivered',
-  CONFIRMED: 'confirmed',
+  PARTIALLY_COMPLETED: 'partially_completed',
+  COMPLETED: 'completed',
   CANCELLED: 'cancelled',
 };
 
 export const TRANSFER_STATUS_ARRAY = Object.values(TRANSFER_STATUS);
+
+// Transfer item statuses
+export const TRANSFER_ITEM_STATUS = {
+  PENDING: 'pending',
+  RECEIVED: 'received',
+  REJECTED: 'rejected',
+  EXPIRED: 'expired',
+  CANCELLED: 'cancelled',
+};
+
+export const TRANSFER_ITEM_STATUS_ARRAY = Object.values(TRANSFER_ITEM_STATUS);
+
+// Handover receipt decisions
+export const RECEIPT_DECISION = {
+  RECEIVED: 'received',
+  REJECTED: 'rejected',
+  NOT_PRESENTED: 'not_presented',
+};
+
+export const RECEIPT_DECISION_ARRAY = Object.values(RECEIPT_DECISION);
+
+// Handover rejection codes & labels
+export const RECEIPT_REJECTION_CODES = {
+  PACKAGING_DAMAGED: 'PACKAGING_DAMAGED',
+  BATCH_MISMATCH: 'BATCH_MISMATCH',
+  EXPIRED_AT_RECEIPT: 'EXPIRED_AT_RECEIPT',
+  DETAILS_MISMATCH: 'DETAILS_MISMATCH',
+  QUANTITY_MISMATCH: 'QUANTITY_MISMATCH',
+  OTHER: 'OTHER',
+};
+
+export const RECEIPT_REJECTION_CODES_ARRAY = Object.values(RECEIPT_REJECTION_CODES);
+
+export const RECEIPT_REJECTION_LABELS = {
+  [RECEIPT_REJECTION_CODES.PACKAGING_DAMAGED]: 'Packaging damaged or unsealed',
+  [RECEIPT_REJECTION_CODES.BATCH_MISMATCH]: 'Batch number does not match label',
+  [RECEIPT_REJECTION_CODES.EXPIRED_AT_RECEIPT]: 'Medicine expired before or at handover',
+  [RECEIPT_REJECTION_CODES.DETAILS_MISMATCH]: 'Physical details mismatch declared listing',
+  [RECEIPT_REJECTION_CODES.QUANTITY_MISMATCH]: 'Quantity significantly different than expected',
+  [RECEIPT_REJECTION_CODES.OTHER]: 'Other safety or verification concern',
+};
+
+// 4-Point handover receipt checklist keys & descriptions
+export const RECEIPT_CHECKLIST_KEYS = [
+  'packagingIntact',
+  'batchMatches',
+  'expiryMatches',
+  'quantityMatches',
+];
+
+export const RECEIPT_CHECKLIST_DESCRIPTIONS = {
+  packagingIntact: 'Packaging intact and factory seal unbroken',
+  batchMatches: 'Batch number matches verified record',
+  expiryMatches: 'Expiry date is valid and matches record',
+  quantityMatches: 'Physical count matches received quantity',
+};
+
+// Custody event types (Append-only hash-chained ledger)
+export const CUSTODY_EVENT_TYPES = {
+  SUBMITTED: 'SUBMITTED',
+  AUTO_SCREENED: 'AUTO_SCREENED',
+  PHARMACIST_APPROVED: 'PHARMACIST_APPROVED',
+  PHARMACIST_REJECTED: 'PHARMACIST_REJECTED',
+  QR_ISSUED: 'QR_ISSUED',
+  MATCH_ACCEPTED: 'MATCH_ACCEPTED',
+  HANDOVER_SCHEDULED: 'HANDOVER_SCHEDULED',
+  HANDOVER_RECEIVED: 'HANDOVER_RECEIVED',
+  HANDOVER_REJECTED_AT_RECEIPT: 'HANDOVER_REJECTED_AT_RECEIPT',
+  MATCH_CANCELLED: 'MATCH_CANCELLED',
+  EXPIRED: 'EXPIRED',
+  DONOR_CANCELLED: 'DONOR_CANCELLED',
+};
+
+export const CUSTODY_EVENT_TYPES_ARRAY = Object.values(CUSTODY_EVENT_TYPES);
+
+// Handover token & policy constants
+export const HANDOVER_TOKEN_TTL_MINUTES = 15;
+export const HANDOVER_REMINDER_DAYS = 3;
+export const HANDOVER_AUTO_CANCEL_DAYS = 14;
+export const HANDOVER_TOKEN_MAX_ATTEMPTS = 5;
 
 // Audit log action types
 export const AUDIT_ACTIONS = {
@@ -455,6 +541,19 @@ export const AUDIT_ACTIONS = {
   CLAIM_AUTO_CANCELLED_EXPIRY: 'CLAIM_AUTO_CANCELLED_EXPIRY',
   CLAIM_CONTACT_REVEALED: 'CLAIM_CONTACT_REVEALED',
   CLAIM_ADMIN_CANCELLED: 'CLAIM_ADMIN_CANCELLED',
+  QR_ISSUED: 'QR_ISSUED',
+  LABELS_DOWNLOADED: 'LABELS_DOWNLOADED',
+  TRANSFER_CREATED: 'TRANSFER_CREATED',
+  HANDOVER_TOKEN_ISSUED: 'HANDOVER_TOKEN_ISSUED',
+  HANDOVER_LOOKUP_FAILED: 'HANDOVER_LOOKUP_FAILED',
+  HANDOVER_ITEM_RECEIVED: 'HANDOVER_ITEM_RECEIVED',
+  HANDOVER_ITEM_REJECTED: 'HANDOVER_ITEM_REJECTED',
+  HANDOVER_COMPLETED: 'HANDOVER_COMPLETED',
+  TRANSFER_CANCELLED: 'TRANSFER_CANCELLED',
+  TRANSFER_AUTO_CANCELLED: 'TRANSFER_AUTO_CANCELLED',
+  TRANSFER_REMINDER_SENT: 'TRANSFER_REMINDER_SENT',
+  RECEIPT_DOWNLOADED: 'RECEIPT_DOWNLOADED',
+  CUSTODY_INTEGRITY_CHECK: 'CUSTODY_INTEGRITY_CHECK',
 };
 
 export const AUDIT_ACTIONS_ARRAY = Object.values(AUDIT_ACTIONS);

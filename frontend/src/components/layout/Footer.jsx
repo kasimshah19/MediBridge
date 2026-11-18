@@ -24,6 +24,7 @@ export default function Footer() {
             <h5 className="text-xs font-bold uppercase tracking-wider text-text-heading mb-3">Platform</h5>
             <ul className="space-y-2 text-sm text-text-body">
               <li><Link to="/#how-it-works" className="hover:text-teal-600 transition-colors">How It Works</Link></li>
+              <li><Link to="/verify" className="hover:text-teal-600 transition-colors">Verify Medicine (QR)</Link></li>
               <li><Link to="/for-ngos" className="hover:text-teal-600 transition-colors">For NGOs & Clinics</Link></li>
               <li><Link to="/about" className="hover:text-teal-600 transition-colors">About Our Mission</Link></li>
               <li><Link to="/register" className="hover:text-teal-600 transition-colors">Join as Donor / Partner</Link></li>

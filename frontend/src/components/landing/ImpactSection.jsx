@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Building2, Users, Award, MapPinned, Sparkles, RefreshCw } from 'lucide-react';
+import {
+  Building2,
+  Users,
+  Award,
+  MapPinned,
+  Sparkles,
+  RefreshCw,
+  CheckCircle2,
+  PackageCheck,
+} from 'lucide-react';
 import { getPublicStats } from '../../api/public.api';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -72,7 +81,9 @@ export default function ImpactSection() {
     Number(stats.verifiedOrganizations || 0) === 0 &&
     Number(stats.registeredDonors || 0) === 0 &&
     Number(stats.verifiedPharmacists || 0) === 0 &&
-    Number(stats.citiesCovered || 0) === 0;
+    Number(stats.citiesCovered || 0) === 0 &&
+    Number(stats.completedHandovers || 0) === 0 &&
+    Number(stats.medicinesTransferred || 0) === 0;
 
   return (
     <section className="py-12 border-y border-teal-900/10 bg-white/70 backdrop-blur-md">
@@ -135,56 +146,82 @@ export default function ImpactSection() {
 
         {/* Active Stats Grid */}
         {!loading && !error && !allZero && stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {/* Stat 1: Verified Organizations */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-teal-100 shadow-soft hover:shadow-hover transition-all duration-200">
-              <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center mb-3">
-                <Building2 size={20} />
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-teal-100 shadow-soft hover:shadow-hover transition-all duration-200">
+              <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center mb-2.5">
+                <Building2 size={18} />
               </div>
-              <p className="text-2xl sm:text-3xl font-extrabold text-teal-900 tracking-tight">
+              <p className="text-xl sm:text-2xl font-extrabold text-teal-900 tracking-tight">
                 <CountUpNumber end={stats.verifiedOrganizations || 0} />
               </p>
-              <p className="text-xs font-semibold text-text-muted mt-1 uppercase tracking-wider">
-                Verified Clinics & NGOs
+              <p className="text-[10px] sm:text-xs font-semibold text-text-muted mt-1 uppercase tracking-wider">
+                Clinics & NGOs
               </p>
             </div>
 
             {/* Stat 2: Registered Donors */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-teal-100 shadow-soft hover:shadow-hover transition-all duration-200">
-              <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center mb-3">
-                <Users size={20} />
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-teal-100 shadow-soft hover:shadow-hover transition-all duration-200">
+              <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center mb-2.5">
+                <Users size={18} />
               </div>
-              <p className="text-2xl sm:text-3xl font-extrabold text-sky-900 tracking-tight">
+              <p className="text-xl sm:text-2xl font-extrabold text-sky-900 tracking-tight">
                 <CountUpNumber end={stats.registeredDonors || 0} />
               </p>
-              <p className="text-xs font-semibold text-text-muted mt-1 uppercase tracking-wider">
+              <p className="text-[10px] sm:text-xs font-semibold text-text-muted mt-1 uppercase tracking-wider">
                 Active Donors
               </p>
             </div>
 
             {/* Stat 3: Verified Pharmacists */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-teal-100 shadow-soft hover:shadow-hover transition-all duration-200">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3">
-                <Award size={20} />
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-teal-100 shadow-soft hover:shadow-hover transition-all duration-200">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-2.5">
+                <Award size={18} />
               </div>
-              <p className="text-2xl sm:text-3xl font-extrabold text-emerald-900 tracking-tight">
+              <p className="text-xl sm:text-2xl font-extrabold text-emerald-900 tracking-tight">
                 <CountUpNumber end={stats.verifiedPharmacists || 0} />
               </p>
-              <p className="text-xs font-semibold text-text-muted mt-1 uppercase tracking-wider">
-                Licensed Pharmacists
+              <p className="text-[10px] sm:text-xs font-semibold text-text-muted mt-1 uppercase tracking-wider">
+                Pharmacists
               </p>
             </div>
 
             {/* Stat 4: Cities Covered */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-teal-100 shadow-soft hover:shadow-hover transition-all duration-200">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center mb-3">
-                <MapPinned size={20} />
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-teal-100 shadow-soft hover:shadow-hover transition-all duration-200">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center mb-2.5">
+                <MapPinned size={18} />
               </div>
-              <p className="text-2xl sm:text-3xl font-extrabold text-indigo-900 tracking-tight">
+              <p className="text-xl sm:text-2xl font-extrabold text-indigo-900 tracking-tight">
                 <CountUpNumber end={stats.citiesCovered || 0} />
               </p>
-              <p className="text-xs font-semibold text-text-muted mt-1 uppercase tracking-wider">
+              <p className="text-[10px] sm:text-xs font-semibold text-text-muted mt-1 uppercase tracking-wider">
                 Cities Covered
+              </p>
+            </div>
+
+            {/* Stat 5: Completed Handovers */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-teal-100 shadow-soft hover:shadow-hover transition-all duration-200">
+              <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mb-2.5">
+                <CheckCircle2 size={18} />
+              </div>
+              <p className="text-xl sm:text-2xl font-extrabold text-purple-900 tracking-tight">
+                <CountUpNumber end={stats.completedHandovers || 0} />
+              </p>
+              <p className="text-[10px] sm:text-xs font-semibold text-text-muted mt-1 uppercase tracking-wider">
+                Handovers
+              </p>
+            </div>
+
+            {/* Stat 6: Medicines Transferred */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-teal-100 shadow-soft hover:shadow-hover transition-all duration-200">
+              <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center mb-2.5">
+                <PackageCheck size={18} />
+              </div>
+              <p className="text-xl sm:text-2xl font-extrabold text-rose-900 tracking-tight">
+                <CountUpNumber end={stats.medicinesTransferred || 0} />
+              </p>
+              <p className="text-[10px] sm:text-xs font-semibold text-text-muted mt-1 uppercase tracking-wider">
+                Units Transferred
               </p>
             </div>
           </div>

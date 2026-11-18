@@ -12,6 +12,7 @@ import {
   AUDIT_ACTIONS,
   NOTIFICATION_TYPES,
   ROLES,
+  CUSTODY_EVENT_TYPES,
 } from '../config/constants.js';
 import env from '../config/env.js';
 import ApiError from '../utils/ApiError.js';
@@ -21,6 +22,7 @@ import Verification from '../models/Verification.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import recordAuditLog from './audit.service.js';
+import { recordEvent } from './custody.service.js';
 import {
   sendVerificationDecisionEmail,
   sendVerificationMoreInfoEmail,
@@ -56,22 +58,41 @@ export const deriveDonationStatus = (items = []) => {
 
   const statuses = items.map((item) => (typeof item === 'string' ? item : item?.status));
 
+  // 1. Any item pending -> stays under_verification
   if (statuses.includes(MEDICINE_STATUS.PENDING)) {
     return DONATION_STATUS.UNDER_VERIFICATION;
   }
 
+  // 2. Any more_info_required -> more_info_required
   if (statuses.includes(MEDICINE_STATUS.MORE_INFO_REQUIRED)) {
     return DONATION_STATUS.MORE_INFO_REQUIRED;
   }
 
+  // 3. Any item transferred AND any item approved or reserved -> handed_over (partial handover)
+  const hasTransferred = statuses.includes(MEDICINE_STATUS.TRANSFERRED);
+  const hasApprovedOrReserved =
+    statuses.includes(MEDICINE_STATUS.APPROVED) || statuses.includes(MEDICINE_STATUS.RESERVED);
+
+  if (hasTransferred && hasApprovedOrReserved) {
+    return DONATION_STATUS.HANDED_OVER;
+  }
+
+  // 4. Any item transferred (and no remaining approved/reserved) -> completed
+  if (hasTransferred) {
+    return DONATION_STATUS.COMPLETED;
+  }
+
+  // 5. Any item approved (not yet reserved) -> approved
   if (statuses.includes(MEDICINE_STATUS.APPROVED)) {
     return DONATION_STATUS.APPROVED;
   }
 
+  // 6. Any item reserved -> matched
   if (statuses.includes(MEDICINE_STATUS.RESERVED)) {
     return DONATION_STATUS.MATCHED;
   }
 
+  // 7. Else all rejected / expired / cancelled -> rejected
   return DONATION_STATUS.REJECTED;
 };
 
@@ -454,6 +475,10 @@ export const verifyMedicine = async ({
     medUpdate.$set.priority = calculatePriority(medicine.expiryDate, now);
     medUpdate.$set.rejectionReasonText = null;
     medUpdate.$set.rejectionSource = null;
+    medUpdate.$set.qr = {
+      identifier: medicine.medicineId,
+      issuedAt: now,
+    };
   } else if (decision === VERIFICATION_DECISION.REJECTED) {
     medUpdate.$set.status = MEDICINE_STATUS.REJECTED;
     medUpdate.$set.rejectionSource = REJECTION_SOURCES.PHARMACIST;
@@ -486,6 +511,41 @@ export const verifyMedicine = async ({
       409,
       'Conflict: This medicine item was already verified or modified by a concurrent request.'
     );
+  }
+
+  // 7b. Record Custody Events
+  if (decision === VERIFICATION_DECISION.APPROVED) {
+    await recordEvent({
+      medicineId: medicine._id,
+      eventType: CUSTODY_EVENT_TYPES.PHARMACIST_APPROVED,
+      actorId: pharmacistId,
+      actorRole: ROLES.PHARMACIST,
+      data: {
+        notes: (reason || '').trim(),
+        checklist,
+      },
+    });
+
+    await recordEvent({
+      medicineId: medicine._id,
+      eventType: CUSTODY_EVENT_TYPES.QR_ISSUED,
+      actorId: pharmacistId,
+      actorRole: ROLES.PHARMACIST,
+      data: {
+        qrIdentifier: medicine.medicineId,
+      },
+    });
+  } else if (decision === VERIFICATION_DECISION.REJECTED) {
+    await recordEvent({
+      medicineId: medicine._id,
+      eventType: CUSTODY_EVENT_TYPES.PHARMACIST_REJECTED,
+      actorId: pharmacistId,
+      actorRole: ROLES.PHARMACIST,
+      data: {
+        reasonCode,
+        reason: (reason || '').trim(),
+      },
+    });
   }
 
   // 8. Recompute Donation Status

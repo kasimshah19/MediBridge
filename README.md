@@ -559,6 +559,82 @@ To prevent two pharmacists from simultaneously reviewing the same donation or co
 
 ---
 
+## 🔐 Phase 7: QR & Cryptographic Chain of Custody
+
+### 1. Chain of Custody Architecture & Hash Formula
+
+Every state change across a medicine's lifecycle is written to an append-only, immutable `CustodyEvent` ledger. Each event is cryptographically linked to the previous event for that medicine:
+
+$$\text{Event Hash} = \text{SHA-256}(\text{prevHash} \mathbin{\Vert} \text{"|"} \mathbin{\Vert} \text{canonicalJSON}(\text{payload}))$$
+
+- **Deterministic Payload Serialization**: `canonicalJSON` recursively sorts all object keys alphabetically, serializes Date objects to ISO 8601 UTC strings, and trims strings to ensure identical hash calculation across runtimes and platforms.
+- **Genesis Block**: The initial event for every medicine has `prevHash = "GENESIS"` and `seq = 1`.
+- **Database Immutability**: `CustodyEventSchema` enforces strict Mongoose pre-hooks (`pre('save')`, `pre('updateOne')`, `pre('deleteOne')`, `pre('findOneAndUpdate')`, etc.) that throw a runtime error on any update, deletion, or replacement operation.
+- **Privacy Enforcement**: Donor phone numbers, email addresses, pharmacist contact numbers, and precise street addresses are strictly stripped from all custody event payloads and public trace APIs.
+
+### 2. Digital QR Passports & Verification URLs
+
+When a medicine passes pharmacist verification, a cryptographically signed digital passport is issued:
+- **HMAC-SHA256 Signature**: Medicine IDs are signed using `QR_SIGNING_SECRET`:
+  $$\text{Signature} = \text{HMAC-SHA-256}(\text{medicineId}, \text{secret})[:32]$$
+- **Public Verification Endpoint**: `GET /api/public/verify/:medicineId?token=:token` returns real-time authenticity, approval status, verifying pharmacist credentials, and sanitized custody event timeline.
+
+### 3. Dynamic Handover Passes & Physical Receipt
+
+For physical transfer between Donor and NGO:
+- **Rolling Handover Token**: A 6-character alphanumeric pass code (`HND-XXXXXX`) generated via secure CSPRNG with 15-minute TTL and single-use consumption.
+- **Attempt Lockout**: Maximum 5 failed attempts per transfer before temporary lockout, preventing brute-force code guessing.
+- **4-Point Physical Inspection Checklist**:
+  1. `sealedPackagingConfirmed`
+  2. `labelAndBatchMatched`
+  3. `visualConditionIntact`
+  4. `temperatureCompliant`
+- **Partial Item Decisions**: NGO inspectors can accept or reject individual items with standardized rejection codes (`packaging_damaged`, `seal_broken`, `batch_mismatch`, `expiry_imminent`, `temperature_compromised`, `other`).
+- **Chain Finalization**: Upon completion, atomic ledger events are written (`HANDOVER_RECEIVED` / `HANDOVER_REJECTED_AT_RECEIPT`), transfer transitions to `completed`, and donation status updates to `handed_over` or `completed`.
+
+### 4. Printable PDF Services
+
+MediBridge includes two vector-rendered PDF generation services:
+1. **Printable Medicine Labels (A4 2x4 Layout)**: `GET /api/donations/:id/labels.pdf` generates high-resolution printable sticker sheets with medicine name, batch number, expiry countdown, verification badge, and embedded QR code.
+2. **Official Handover Receipt**: `GET /api/transfers/:id/receipt.pdf` generates an archival redistribution manifest detailing participating organizations, itemized decisions, checklist confirmations, and the ledger SHA-256 hash prefix for each item.
+
+### 5. Phase 7 Endpoints
+
+#### QR & Public Verification
+- `GET /api/medicines/:medicineId/qr` — Get QR token, SVG/PNG data URI, and public verify URL
+- `GET /api/donations/:id/labels.pdf` — Download printable 2x4 labels PDF
+- `GET /api/public/verify/:medicineId?token=` — Public authenticity verification & custody trace
+
+#### Handover & Transfers
+- `GET /api/transfers/my?role=donor|ngo&status=&page=&limit=` — List user handovers
+- `GET /api/transfers/:id` — Get transfer manifest & item checklist
+- `POST /api/transfers/:id/handover-token` — Generate dynamic single-use handover pass (Donor)
+- `POST /api/transfers/lookup-handover` — Look up transfer by handover token or transfer code (NGO)
+- `POST /api/transfers/:id/receive` — Submit checklist & item reception decisions (NGO)
+- `GET /api/transfers/:id/receipt.pdf` — Download official handover receipt PDF
+
+#### Custody Ledger & Audit
+- `GET /api/custody/medicines/:medicineId` — Get immutable event chain for a medicine
+- `GET /api/custody/donations/:id` — Get aggregated custody ledger for all items in a donation
+- `GET /api/admin/transfers` — Admin transfer registry & audit dashboard
+- `GET /api/admin/transfers/summary` — Admin transfer aggregate statistics
+- `GET /api/admin/custody/verify-all` — Verify integrity of all medicine hash chains in the database
+
+### 6. CLI Tools & Verification
+
+```bash
+# 1. Backfill Phase 7 QR metadata and custody events for legacy records
+npm run backfill:phase7
+
+# 2. Cryptographically audit all medicine custody hash chains in the database
+npm run custody:verify
+
+# 3. Run full test suite across all 14 test suites
+npm test
+```
+
+---
+
 ## 👥 Roles
 
 - **Donor** — Submit unused, sealed medicines for donation

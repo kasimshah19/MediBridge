@@ -223,6 +223,17 @@ const medicineSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    qr: {
+      identifier: {
+        type: String,
+        default: null,
+        index: true,
+      },
+      issuedAt: {
+        type: Date,
+        default: null,
+      },
+    },
     reservation: {
       type: {
         claimId: {

@@ -12,7 +12,11 @@ import {
   CLAIM_STATUS,
   CLAIM_INITIATOR,
   REQUEST_STATUS,
+  CUSTODY_EVENT_TYPES,
+  TRANSFER_STATUS,
+  TRANSFER_ITEM_STATUS,
 } from '../config/constants.js';
+import env from '../config/env.js';
 import Medicine from '../models/Medicine.js';
 import Donation from '../models/Donation.js';
 import JobRun from '../models/JobRun.js';
@@ -20,8 +24,10 @@ import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import Claim from '../models/Claim.js';
 import Request from '../models/Request.js';
+import Transfer from '../models/Transfer.js';
 import ApiError from '../utils/ApiError.js';
 import recordAuditLog from './audit.service.js';
+import { recordEvent, isDbConnected } from './custody.service.js';
 import { sendExpiryAlertEmail } from './email.service.js';
 import {
   nowIST,
@@ -620,6 +626,149 @@ export const runExpiryCheck = async ({
           at: executionAsOf,
         });
         await req.save();
+      }
+
+      // Record EXPIRED custody events for newly expired medicines
+      for (const medId of newlyExpiredMedicineIds) {
+        await recordEvent({
+          medicineId: medId,
+          eventType: CUSTODY_EVENT_TYPES.EXPIRED,
+          actorId: null,
+          actorRole: 'system',
+          data: {
+            reason: 'Automated expiry job detected medicine passed expiration date',
+          },
+        });
+      }
+
+      // Phase 7: Transfer interplay
+      if (isDbConnected()) {
+        // 1) Mark expired items in active transfers
+        if (newlyExpiredMedicineIds.length > 0) {
+          const affectedTransfers = await Transfer.find({
+            status: { $in: [TRANSFER_STATUS.SCHEDULED, TRANSFER_STATUS.PARTIALLY_COMPLETED] },
+            'items.medicineId': { $in: newlyExpiredMedicineIds },
+          });
+
+          for (const tr of affectedTransfers) {
+            let trChanged = false;
+            for (const it of tr.items) {
+              if (
+                newlyExpiredMedicineIds.some((id) => id.equals(it.medicineId)) &&
+                it.status === TRANSFER_ITEM_STATUS.PENDING
+              ) {
+                it.status = TRANSFER_ITEM_STATUS.EXPIRED;
+                trChanged = true;
+              }
+            }
+
+            const hasViable = tr.items.some((it) =>
+              [TRANSFER_ITEM_STATUS.PENDING, TRANSFER_ITEM_STATUS.RECEIVED].includes(it.status)
+            );
+            if (!hasViable) {
+              tr.status = TRANSFER_STATUS.CANCELLED;
+              tr.cancelReason = 'All items in transfer expired before physical receipt';
+              tr.cancelledAt = executionAsOf;
+              trChanged = true;
+            }
+
+            if (trChanged) {
+              await tr.save();
+            }
+          }
+        }
+
+        // 2) Handover reminders (HANDOVER_REMINDER_DAYS = 3)
+        const reminderThreshold = new Date(
+          executionAsOf.getTime() - (env.HANDOVER_REMINDER_DAYS || 3) * 24 * 60 * 60 * 1000
+        );
+        const dueReminders = await Transfer.find({
+          status: TRANSFER_STATUS.SCHEDULED,
+          createdAt: { $lte: reminderThreshold },
+          reminderSentAt: null,
+        });
+
+        for (const tr of dueReminders) {
+          tr.reminderSentAt = executionAsOf;
+          await tr.save();
+
+          await Notification.create({
+            userId: tr.donorId,
+            title: 'Handover Reminder ⏰',
+            message: `Transfer ${tr.transferCode} is awaiting handover. Please coordinate with the NGO or present your handover pass.`,
+            type: NOTIFICATION_TYPES.HANDOVER_REMINDER,
+            link: `/donor/handovers/${tr._id}`,
+          });
+          notificationsCreated++;
+        }
+
+        // 3) Handover auto-cancel (HANDOVER_AUTO_CANCEL_DAYS = 14) with no received items
+        const autoCancelThreshold = new Date(
+          executionAsOf.getTime() - (env.HANDOVER_AUTO_CANCEL_DAYS || 14) * 24 * 60 * 60 * 1000
+        );
+        const staleTransfers = await Transfer.find({
+          status: TRANSFER_STATUS.SCHEDULED,
+          createdAt: { $lte: autoCancelThreshold },
+          'items.status': { $ne: TRANSFER_ITEM_STATUS.RECEIVED },
+        });
+
+        for (const tr of staleTransfers) {
+          tr.status = TRANSFER_STATUS.CANCELLED;
+          tr.cancelReason = 'Auto-cancelled: Handover window expired (14 days)';
+          tr.cancelledAt = executionAsOf;
+
+          for (const it of tr.items) {
+            if (it.status === TRANSFER_ITEM_STATUS.PENDING) {
+              it.status = TRANSFER_ITEM_STATUS.CANCELLED;
+              await recordEvent({
+                medicineId: it.medicineId,
+                eventType: CUSTODY_EVENT_TYPES.MATCH_CANCELLED,
+                actorId: null,
+                actorRole: 'system',
+                data: {
+                  transferCode: tr.transferCode,
+                  reason: 'Handover window expired (14 days)',
+                },
+              });
+            }
+          }
+          await tr.save();
+
+          const claim = await Claim.findById(tr.claimId);
+          if (claim && claim.status === CLAIM_STATUS.ACCEPTED) {
+            claim.status = CLAIM_STATUS.CANCELLED;
+            claim.cancelReason = 'Auto-cancelled: Handover window expired (14 days)';
+            claim.statusHistory.push({
+              status: CLAIM_STATUS.CANCELLED,
+              note: 'Auto-cancelled: Handover window expired (14 days)',
+              at: executionAsOf,
+            });
+            await claim.save();
+
+            await Medicine.updateMany(
+              {
+                _id: { $in: claim.medicineIds },
+                'reservation.claimId': claim._id,
+                status: MEDICINE_STATUS.RESERVED,
+              },
+              {
+                $set: {
+                  status: MEDICINE_STATUS.APPROVED,
+                  reservation: null,
+                },
+              }
+            );
+          }
+
+          await Notification.create({
+            userId: tr.donorId,
+            title: 'Handover Auto-Cancelled',
+            message: `Transfer ${tr.transferCode} was auto-cancelled because the 14-day handover window elapsed.`,
+            type: NOTIFICATION_TYPES.HANDOVER_CANCELLED,
+            link: `/donor/handovers/${tr._id}`,
+          });
+          notificationsCreated++;
+        }
       }
     }
 

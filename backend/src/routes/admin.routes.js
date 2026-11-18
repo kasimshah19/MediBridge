@@ -14,6 +14,10 @@ import {
   cancelAdminClaim,
   getAdminRequirements,
   getOrganizationsMap,
+  getAdminTransfers,
+  getAdminTransfersSummary,
+  getAdminCustodyTrace,
+  verifyAllCustodyChains,
 } from '../controllers/admin.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -55,5 +59,11 @@ router.get('/matching/summary', getMatchingSummary);
 router.get('/claims', getAdminClaims);
 router.post('/claims/:id/cancel', validate(claimCancelSchema), cancelAdminClaim);
 router.get('/requirements', getAdminRequirements);
+
+// Phase 7 Transfers & Custody Audit
+router.get('/transfers/summary', getAdminTransfersSummary);
+router.get('/transfers', getAdminTransfers);
+router.get('/custody/:medicineId', getAdminCustodyTrace);
+router.post('/custody/verify', verifyAllCustodyChains);
 
 export default router;
