@@ -88,6 +88,46 @@ export const forceReleaseDonation = async (id) => {
   return response.data;
 };
 
+/**
+ * Get matching summary metrics for admin.
+ */
+export const getMatchingSummary = async () => {
+  const response = await api.get('/admin/matching/summary');
+  return response.data;
+};
+
+/**
+ * Get claims list for admin with status filter & pagination.
+ */
+export const getAdminClaims = async (params = {}) => {
+  const response = await api.get('/admin/claims', { params });
+  return response.data;
+};
+
+/**
+ * Force cancel an active claim by admin.
+ */
+export const cancelAdminClaim = async (id, reason) => {
+  const response = await api.post(`/admin/claims/${id}/cancel`, { reason });
+  return response.data;
+};
+
+/**
+ * Get NGO requirements list for admin.
+ */
+export const getAdminRequirements = async (params = {}) => {
+  const response = await api.get('/admin/requirements', { params });
+  return response.data;
+};
+
+/**
+ * Get verified organizations map coordinates.
+ */
+export const getOrganizationsMap = async () => {
+  const response = await api.get('/admin/organizations/map');
+  return response.data;
+};
+
 export default {
   getAdminOrganizations,
   getAdminOrganizationById,
@@ -100,5 +140,10 @@ export default {
   getAdminVerificationSummary,
   getAdminVerificationLog,
   forceReleaseDonation,
+  getMatchingSummary,
+  getAdminClaims,
+  cancelAdminClaim,
+  getAdminRequirements,
+  getOrganizationsMap,
 };
 

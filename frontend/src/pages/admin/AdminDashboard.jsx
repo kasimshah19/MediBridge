@@ -12,6 +12,8 @@ import {
   Stethoscope,
   Sparkles,
   AlertTriangle,
+  HeartHandshake,
+  GitPullRequest,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';

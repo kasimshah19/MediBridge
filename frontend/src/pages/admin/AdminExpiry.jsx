@@ -639,6 +639,11 @@ export default function AdminExpiry() {
 
                       <td className="py-3.5 px-4">
                         <StatusBadge status={item.status} size="sm" />
+                        {item.status === 'reserved' && (
+                          <span className="block mt-1 text-[10px] font-semibold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/80 w-max">
+                            Reserved for NGO
+                          </span>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-4 text-right">

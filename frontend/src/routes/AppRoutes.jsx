@@ -34,11 +34,17 @@ import PharmacistHistory from '../pages/pharmacist/PharmacistHistory';
 import PharmacistExpiry from '../pages/pharmacist/PharmacistExpiry';
 import NgoDashboard from '../pages/ngo/NgoDashboard';
 import NgoOnboarding from '../pages/ngo/NgoOnboarding';
+import NgoRequirements from '../pages/ngo/NgoRequirements';
+import NgoFindMedicines from '../pages/ngo/NgoFindMedicines';
+import NgoMatches from '../pages/ngo/NgoMatches';
+import DonorNearby from '../pages/donor/DonorNearby';
+import DonorMatches from '../pages/donor/DonorMatches';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminOrganizations from '../pages/admin/AdminOrganizations';
 import AdminPharmacists from '../pages/admin/AdminPharmacists';
 import AdminExpiry from '../pages/admin/AdminExpiry';
 import AdminVerification from '../pages/admin/AdminVerification';
+import AdminMatching from '../pages/admin/AdminMatching';
 
 export default function AppRoutes() {
   return (
@@ -77,6 +83,8 @@ export default function AppRoutes() {
             <Route path="/donor/donations" element={<MyDonations />} />
             <Route path="/donor/donations/:id" element={<DonationDetail />} />
             <Route path="/donor/expiry" element={<DonorExpiry />} />
+            <Route path="/donor/nearby" element={<DonorNearby />} />
+            <Route path="/donor/matches" element={<DonorMatches />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['pharmacist', 'admin']} />}>
@@ -90,6 +98,9 @@ export default function AppRoutes() {
           <Route element={<ProtectedRoute allowedRoles={['ngo', 'admin']} />}>
             <Route path="/ngo/dashboard" element={<NgoDashboard />} />
             <Route path="/ngo/onboarding" element={<NgoOnboarding />} />
+            <Route path="/ngo/requirements" element={<NgoRequirements />} />
+            <Route path="/ngo/find" element={<NgoFindMedicines />} />
+            <Route path="/ngo/matches" element={<NgoMatches />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
@@ -98,6 +109,7 @@ export default function AppRoutes() {
             <Route path="/admin/pharmacists" element={<AdminPharmacists />} />
             <Route path="/admin/verification" element={<AdminVerification />} />
             <Route path="/admin/expiry" element={<AdminExpiry />} />
+            <Route path="/admin/matching" element={<AdminMatching />} />
           </Route>
         </Route>
       </Route>

@@ -68,6 +68,10 @@ export const deriveDonationStatus = (items = []) => {
     return DONATION_STATUS.APPROVED;
   }
 
+  if (statuses.includes(MEDICINE_STATUS.RESERVED)) {
+    return DONATION_STATUS.MATCHED;
+  }
+
   return DONATION_STATUS.REJECTED;
 };
 

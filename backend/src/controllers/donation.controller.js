@@ -3,6 +3,7 @@ import Medicine from '../models/Medicine.js';
 import Verification from '../models/Verification.js';
 import Notification from '../models/Notification.js';
 import AuditLog from '../models/AuditLog.js';
+import Claim from '../models/Claim.js';
 import {
   DONATION_STATUS,
   MEDICINE_STATUS,
@@ -12,6 +13,8 @@ import {
   ROLES,
   APPROVAL_STATUS,
   REJECTION_REASON_LABELS,
+  CLAIM_STATUS,
+  CLAIM_INITIATOR,
 } from '../config/constants.js';
 import env from '../config/env.js';
 import ApiError from '../utils/ApiError.js';
@@ -21,6 +24,7 @@ import { screenMedicine } from '../services/screening.service.js';
 import { calculatePriority, normalizeExpiryDate, decorateMedicine } from '../services/expiry.service.js';
 import storageService from '../services/storage.service.js';
 import verificationService from '../services/verification.service.js';
+import { findNearbyOrganizationsForDonation } from '../services/geo.service.js';
 
 /**
  * Helper to attach donor-safe verification summary to medicine items.
@@ -323,9 +327,11 @@ export const getMyDonationsSummary = async (req, res, next) => {
       underVerification,
       needsResponse,
       approved,
+      matched,
       rejected,
       cancelled,
       totalMedicineItems,
+      incomingRequests,
     ] = await Promise.all([
       Donation.countDocuments({ donorId }),
       Donation.countDocuments({ donorId, status: DONATION_STATUS.DRAFT }),
@@ -339,23 +345,19 @@ export const getMyDonationsSummary = async (req, res, next) => {
         },
       }),
       Donation.countDocuments({ donorId, status: DONATION_STATUS.MORE_INFO_REQUIRED }),
-      Donation.countDocuments({
-        donorId,
-        status: {
-          $in: [
-            DONATION_STATUS.APPROVED,
-            DONATION_STATUS.MATCHED,
-            DONATION_STATUS.HANDED_OVER,
-            DONATION_STATUS.COMPLETED,
-          ],
-        },
-      }),
+      Donation.countDocuments({ donorId, status: DONATION_STATUS.APPROVED }),
+      Donation.countDocuments({ donorId, status: DONATION_STATUS.MATCHED }),
       Donation.countDocuments({
         donorId,
         status: { $in: [DONATION_STATUS.SCREENING_REJECTED, DONATION_STATUS.REJECTED] },
       }),
       Donation.countDocuments({ donorId, status: DONATION_STATUS.CANCELLED }),
       Medicine.countDocuments({ donorId }),
+      Claim.countDocuments({
+        donorId,
+        initiatedBy: CLAIM_INITIATOR.NGO,
+        status: CLAIM_STATUS.PENDING,
+      }),
     ]);
 
     return res.status(200).json(
@@ -367,9 +369,11 @@ export const getMyDonationsSummary = async (req, res, next) => {
           underVerification,
           needsResponse,
           approved,
+          matched,
           rejected,
           cancelled,
           totalMedicineItems,
+          incomingRequests,
         },
         'Donations summary retrieved successfully.'
       )
@@ -385,7 +389,9 @@ export const getMyDonationsSummary = async (req, res, next) => {
 export const getDonationById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const donation = await Donation.findById(id).populate('items');
+    const donation = await Donation.findById(id)
+      .populate('items')
+      .populate('matchedOrganizationIds', 'name type city state servicesOffered');
 
     if (!donation) {
       throw new ApiError(404, 'Donation record not found.');
@@ -409,7 +415,48 @@ export const getDonationById = async (req, res, next) => {
       donationObj.items = await attachDonorSafeVerification(decorated);
     }
 
+    // Attach claims for owner or admin
+    if (isOwner || isAdmin) {
+      const claims = await Claim.find({ donationId: donation._id })
+        .populate('organizationId', 'name type city state pincode')
+        .sort({ createdAt: -1 });
+      donationObj.claims = claims;
+    }
+
     return res.status(200).json(new ApiResponse(200, donationObj, 'Donation retrieved successfully.'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/donations/:id/nearby-organizations - Find nearby verified NGOs for an approved donation.
+ */
+export const getNearbyOrganizationsForDonation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { radiusKm } = req.query;
+
+    const donation = await Donation.findById(id);
+    if (!donation) {
+      throw new ApiError(404, 'Donation record not found.');
+    }
+
+    const isOwner = donation.donorId.equals(req.user._id);
+    const isAdmin = req.user.role === ROLES.ADMIN;
+
+    if (!isOwner && !isAdmin) {
+      throw new ApiError(403, 'You do not have permission to view nearby organizations for this donation.');
+    }
+
+    const result = await findNearbyOrganizationsForDonation(
+      id,
+      radiusKm ? parseFloat(radiusKm) : undefined
+    );
+
+    return res.status(200).json(
+      new ApiResponse(200, result, 'Nearby organizations retrieved successfully.')
+    );
   } catch (error) {
     next(error);
   }
@@ -1089,4 +1136,5 @@ export default {
   submitDonation,
   cancelDonation,
   respondToMoreInfo,
+  getNearbyOrganizationsForDonation,
 };

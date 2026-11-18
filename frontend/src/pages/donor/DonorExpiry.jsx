@@ -526,6 +526,11 @@ export default function DonorExpiry() {
 
                         <td className="py-3.5 px-4">
                           <StatusBadge status={item.status} size="sm" />
+                          {item.status === 'reserved' && (
+                            <span className="block mt-1 text-[10px] font-semibold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/80 w-max">
+                              Reserved for match
+                            </span>
+                          )}
                         </td>
 
                         <td className="py-3.5 px-4 text-right">
@@ -594,6 +599,11 @@ export default function DonorExpiry() {
                       <div>
                         <span className="text-slate-400 block text-[11px]">Status</span>
                         <StatusBadge status={item.status} size="sm" />
+                        {item.status === 'reserved' && (
+                          <span className="block mt-1 text-[10px] font-semibold text-teal-800 bg-teal-50 px-1 py-0.5 rounded border border-teal-200/80 w-max">
+                            Reserved
+                          </span>
+                        )}
                       </div>
                     </div>
 

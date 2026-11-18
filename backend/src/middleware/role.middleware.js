@@ -1,5 +1,6 @@
 import ApiError from '../utils/ApiError.js';
-import { ROLES, APPROVAL_STATUS } from '../config/constants.js';
+import { ROLES, APPROVAL_STATUS, ORG_STATUS } from '../config/constants.js';
+import Organization from '../models/Organization.js';
 
 /**
  * Role authorization middleware.
@@ -55,6 +56,55 @@ export const requireApprovedPharmacist = (req, _res, next) => {
   }
 
   next();
+};
+
+/**
+ * Middleware that requires the user to have the NGO role AND an APPROVED status AND a VERIFIED organization.
+ * Attaches the verified Organization model document to req.organization.
+ */
+export const requireVerifiedNgo = async (req, _res, next) => {
+  try {
+    if (!req.user) {
+      return next(new ApiError(401, 'Authentication required.'));
+    }
+
+    if (req.user.role !== ROLES.NGO) {
+      return next(
+        new ApiError(
+          403,
+          `Access forbidden: Role '${req.user.role}' is not authorized to access NGO resources.`
+        )
+      );
+    }
+
+    if (!req.user.organizationId) {
+      return next(
+        new ApiError(
+          403,
+          'No organization associated with this account. Please complete organization onboarding.'
+        )
+      );
+    }
+
+    const org = await Organization.findById(req.user.organizationId);
+    if (!org) {
+      return next(new ApiError(404, 'Associated organization not found.'));
+    }
+
+    if (org.verificationStatus !== ORG_STATUS.VERIFIED) {
+      return next(
+        new ApiError(
+          403,
+          `Organization verification status is '${org.verificationStatus}'. Only verified organizations can create requirements and claim donations.`
+        )
+      );
+    }
+
+    req.organization = org;
+    next();
+  } catch (err) {
+    next(err);
+  }
 };
 
 export default authorizeRoles;

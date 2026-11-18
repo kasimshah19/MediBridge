@@ -23,6 +23,8 @@ let Medicine;
 let Verification;
 let Notification;
 let AuditLog;
+let Claim;
+let Request;
 
 const TEST_SECRET = 'test_secret_for_jwt_testing_12345';
 process.env.JWT_SECRET = TEST_SECRET;
@@ -50,6 +52,12 @@ beforeAll(async () => {
 
   const auditMod = await import('../src/models/AuditLog.js');
   AuditLog = auditMod.default;
+
+  const claimMod = await import('../src/models/Claim.js');
+  Claim = claimMod.default;
+
+  const reqMod = await import('../src/models/Request.js');
+  Request = reqMod.default;
 
   const appMod = await import('../src/app.js');
   app = appMod.default;
@@ -833,7 +841,15 @@ beforeEach(() => {
       };
 
       jest.spyOn(Donation, 'findById').mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockDonation),
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(mockDonation),
+        }),
+      });
+
+      jest.spyOn(Claim, 'find').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          sort: jest.fn().mockResolvedValue([]),
+        }),
       });
 
       const mockVerification = {
@@ -934,6 +950,15 @@ beforeEach(() => {
       });
       jest.spyOn(AuditLog, 'create').mockResolvedValue({});
       jest.spyOn(Notification, 'create').mockResolvedValue({});
+      jest.spyOn(Claim, 'find').mockImplementation(() => {
+        const query = Promise.resolve([]);
+        query.populate = jest.fn().mockReturnValue({
+          sort: jest.fn().mockResolvedValue([]),
+        });
+        query.sort = jest.fn().mockResolvedValue([]);
+        return query;
+      });
+      jest.spyOn(Request, 'find').mockResolvedValue([]);
 
       const result = await runExpiryCheck({ dryRun: false });
 

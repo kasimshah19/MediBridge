@@ -110,6 +110,12 @@ const donationSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    matchedOrganizationIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+      },
+    ],
     review: {
       claimedBy: {
         type: mongoose.Schema.Types.ObjectId,

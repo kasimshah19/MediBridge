@@ -121,6 +121,14 @@ export const respondToClarification = async (donationId, itemId, data) => {
   return response.data;
 };
 
+/**
+ * Find nearby verified organizations for an approved donation.
+ */
+export const getNearbyOrganizationsForDonation = async (id, params = {}) => {
+  const response = await api.get(`/donations/${id}/nearby-organizations`, { params });
+  return response.data;
+};
+
 export default {
   createDraftDonation,
   getMyDonations,
@@ -134,5 +142,6 @@ export default {
   submitDonation,
   cancelDonation,
   respondToClarification,
+  getNearbyOrganizationsForDonation,
 };
 

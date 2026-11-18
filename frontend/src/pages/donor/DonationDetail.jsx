@@ -23,6 +23,8 @@ import {
   UploadCloud,
   Send,
   Check,
+  HeartHandshake,
+  Building2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Card from '../../components/ui/Card';
@@ -34,6 +36,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import PriorityChip from '../../components/common/PriorityChip';
 import ExpiryCountdown from '../../components/common/ExpiryCountdown';
 import Lightbox from '../../components/ui/Lightbox';
+import HandoverDetailsDrawer from '../../components/matching/HandoverDetailsDrawer';
 import {
   getDonationById,
   cancelDonation,
@@ -219,6 +222,10 @@ export default function DonationDetail() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
+  // Handover drawer state
+  const [handoverClaimId, setHandoverClaimId] = useState(null);
+  const [handoverDrawerOpen, setHandoverDrawerOpen] = useState(false);
+
   // Lightbox preview state
   const [lightboxState, setLightboxState] = useState({ isOpen: false, src: '', title: '' });
 
@@ -346,6 +353,63 @@ export default function DonationDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column (8 cols): Items list & Pickup */}
         <div className="lg:col-span-8 space-y-6">
+          {/* Phase 6: Matched State Banner */}
+          {(donation.status === 'matched' ||
+            (donation.claims && donation.claims.some((c) => c.status === 'accepted'))) && (
+            <div className="bg-emerald-50 border border-emerald-200/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100/80 flex items-center justify-center text-emerald-700 shrink-0">
+                  <HeartHandshake className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-emerald-950">Matched with Healthcare Organization</h3>
+                  <p className="text-xs text-emerald-800 mt-0.5 leading-relaxed">
+                    This donation has been matched and accepted. Mutual pickup and handover details are unlocked.
+                  </p>
+                </div>
+              </div>
+              {donation.claims?.find((c) => c.status === 'accepted') && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5 shrink-0"
+                  onClick={() => {
+                    const acceptedClaim = donation.claims.find((c) => c.status === 'accepted');
+                    if (acceptedClaim) {
+                      setHandoverClaimId(acceptedClaim._id);
+                      setHandoverDrawerOpen(true);
+                    }
+                  }}
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>View Handover Details</span>
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Phase 6: Approved for Matching Banner */}
+          {donation.status === 'approved' && (
+            <div className="bg-teal-50 border border-teal-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center text-teal-700 shrink-0">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-teal-950">Ready for Healthcare Matching</h3>
+                  <p className="text-xs text-teal-800 mt-0.5 leading-relaxed">
+                    All verified items in this donation are approved. You can explore nearby verified NGOs to initiate a direct donation offer.
+                  </p>
+                </div>
+              </div>
+              <Link to="/donor/nearby" className="shrink-0">
+                <Button size="sm" variant="primary" className="bg-teal-600 hover:bg-teal-700 font-semibold">
+                  Find Nearby NGOs
+                </Button>
+              </Link>
+            </div>
+          )}
+
           {/* Medicines List */}
           <Card className="p-6 bg-white border border-slate-200 shadow-soft space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -784,6 +848,14 @@ export default function DonationDetail() {
         onClose={() => setLightboxState({ isOpen: false, src: '', title: '' })}
         src={lightboxState.src}
         title={lightboxState.title}
+      />
+
+      {/* Handover Details Drawer */}
+      <HandoverDetailsDrawer
+        isOpen={handoverDrawerOpen}
+        onClose={() => setHandoverDrawerOpen(false)}
+        claimId={handoverClaimId}
+        userRole="donor"
       />
     </div>
   );

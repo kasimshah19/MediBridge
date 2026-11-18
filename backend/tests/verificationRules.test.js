@@ -69,6 +69,29 @@ describe('Phase 5 Unit Tests: Verification Pure Rules Engine', () => {
           { status: MEDICINE_STATUS.APPROVED },
         ])
       ).toBe(DONATION_STATUS.APPROVED);
+
+      expect(
+        deriveDonationStatus([
+          { status: MEDICINE_STATUS.APPROVED },
+          { status: MEDICINE_STATUS.RESERVED },
+        ])
+      ).toBe(DONATION_STATUS.APPROVED);
+    });
+
+    test('All viable items reserved (no pending, more_info or approved) -> donation is matched', () => {
+      expect(
+        deriveDonationStatus([
+          { status: MEDICINE_STATUS.RESERVED },
+          { status: MEDICINE_STATUS.RESERVED },
+        ])
+      ).toBe(DONATION_STATUS.MATCHED);
+
+      expect(
+        deriveDonationStatus([
+          { status: MEDICINE_STATUS.RESERVED },
+          { status: MEDICINE_STATUS.REJECTED },
+        ])
+      ).toBe(DONATION_STATUS.MATCHED);
     });
 
     test('All items rejected (or expired) -> donation is rejected', () => {

@@ -84,6 +84,12 @@ export const getPublicConfig = asyncHandler(async (_req, res) => {
         maxPhotos: env.MAX_PHOTOS_PER_MEDICINE,
         priorityThresholds: EXPIRY_THRESHOLDS,
         alertDays: ALERT_DAYS,
+        geoRadiiKm: env.GEO_RADII_KM,
+        defaultRadiusKm: env.DEFAULT_RADIUS_KM,
+        maxRadiusKm: env.MAX_RADIUS_KM || 20,
+        claimResponseTtlHours: env.CLAIM_RESPONSE_TTL_HOURS,
+        maxPendingClaimsPerOrg: env.MAX_PENDING_CLAIMS_PER_ORG,
+        maxOpenRequirementsPerOrg: env.MAX_OPEN_REQUIREMENTS_PER_ORG,
       },
       'Public platform configuration retrieved successfully.'
     )

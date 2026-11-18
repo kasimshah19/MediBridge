@@ -4,9 +4,12 @@ import User from '../models/User.js';
 import Donation from '../models/Donation.js';
 import Notification from '../models/Notification.js';
 import AuditLog from '../models/AuditLog.js';
+import Claim from '../models/Claim.js';
+import Request from '../models/Request.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import verificationService from '../services/verification.service.js';
+import { cancelClaim as cancelClaimService } from '../services/claim.service.js';
 import {
   sendOrgVerifiedEmail,
   sendOrgRejectedEmail,
@@ -20,6 +23,8 @@ import {
   APPROVAL_STATUS,
   AUDIT_ACTIONS,
   DONATION_STATUS,
+  CLAIM_STATUS,
+  REQUEST_STATUS,
 } from '../config/constants.js';
 
 /**
@@ -386,6 +391,8 @@ export const getOverview = asyncHandler(async (_req, res) => {
     recentActivity,
     donationsAwaitingVerification,
     oldestDonation,
+    donationsAwaitingMatch,
+    pendingClaims,
   ] = await Promise.all([
     Organization.countDocuments({ verificationStatus: ORG_STATUS.PENDING }),
     Organization.countDocuments({ verificationStatus: ORG_STATUS.VERIFIED }),
@@ -400,6 +407,8 @@ export const getOverview = asyncHandler(async (_req, res) => {
     Donation.findOne({ status: DONATION_STATUS.UNDER_VERIFICATION })
       .sort({ submittedAt: 1 })
       .select('submittedAt'),
+    Donation.countDocuments({ status: DONATION_STATUS.APPROVED }),
+    Claim.countDocuments({ status: CLAIM_STATUS.PENDING }),
   ]);
 
   const oldestWaitingHours =
@@ -419,6 +428,8 @@ export const getOverview = asyncHandler(async (_req, res) => {
         recentActivity,
         donationsAwaitingVerification,
         oldestWaitingHours,
+        donationsAwaitingMatch,
+        pendingClaims,
       },
       'Admin overview retrieved successfully.'
     )
@@ -469,6 +480,187 @@ export const getVerificationSummary = asyncHandler(async (_req, res) => {
   res.status(200).json(new ApiResponse(200, summary, 'Verification summary retrieved successfully.'));
 });
 
+/**
+ * Matching and claims overview summary for admin.
+ * @route GET /api/admin/matching/summary
+ */
+export const getMatchingSummary = asyncHandler(async (_req, res) => {
+  const [
+    totalClaims,
+    pendingClaims,
+    acceptedClaims,
+    closedClaims,
+    donationsAwaitingMatch,
+    openRequirements,
+    distanceAgg,
+  ] = await Promise.all([
+    Claim.countDocuments(),
+    Claim.countDocuments({ status: CLAIM_STATUS.PENDING }),
+    Claim.countDocuments({ status: CLAIM_STATUS.ACCEPTED }),
+    Claim.countDocuments({
+      status: {
+        $in: [
+          CLAIM_STATUS.DECLINED,
+          CLAIM_STATUS.WITHDRAWN,
+          CLAIM_STATUS.CANCELLED,
+          CLAIM_STATUS.EXPIRED,
+          CLAIM_STATUS.SUPERSEDED,
+        ],
+      },
+    }),
+    Donation.countDocuments({ status: DONATION_STATUS.APPROVED }),
+    Request.countDocuments({ status: REQUEST_STATUS.OPEN }),
+    Claim.aggregate([
+      { $match: { status: CLAIM_STATUS.ACCEPTED } },
+      { $group: { _id: null, avgDistance: { $avg: '$distanceKm' } } },
+    ]),
+  ]);
+
+  const avgDistanceKm =
+    distanceAgg.length > 0 && distanceAgg[0].avgDistance
+      ? Math.round(distanceAgg[0].avgDistance * 10) / 10
+      : 0;
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalClaims,
+        pendingClaims,
+        acceptedClaims,
+        closedClaims,
+        donationsAwaitingMatch,
+        openRequirements,
+        avgDistanceKm,
+      },
+      'Admin matching summary retrieved.'
+    )
+  );
+});
+
+/**
+ * Filterable claims list for admins.
+ * @route GET /api/admin/claims
+ */
+export const getAdminClaims = asyncHandler(async (req, res) => {
+  const { status, search, page = 1, limit = 15 } = req.query;
+  const query = {};
+  if (status && status !== 'all') {
+    query.status = status;
+  }
+  if (search) {
+    query.claimCode = { $regex: search, $options: 'i' };
+  }
+
+  const pageNum = parseInt(page, 10) || 1;
+  const limitNum = Math.min(parseInt(limit, 10) || 15, 50);
+  const skip = (pageNum - 1) * limitNum;
+
+  const [claims, total] = await Promise.all([
+    Claim.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .populate('organizationId', 'name city state')
+      .populate('donorId', 'name city state')
+      .populate('donationId', 'donationCode status'),
+    Claim.countDocuments(query),
+  ]);
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        claims,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum),
+        },
+      },
+      'Admin claims list retrieved.'
+    )
+  );
+});
+
+/**
+ * Admin force-cancellation of an active or pending claim.
+ * @route POST /api/admin/claims/:id/cancel
+ */
+export const cancelAdminClaim = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  const claim = await cancelClaimService({
+    claimId: id,
+    user: req.user,
+    reason,
+    req,
+    isAdmin: true,
+  });
+
+  res.status(200).json(
+    new ApiResponse(200, { claim }, 'Claim cancelled by administrator.')
+  );
+});
+
+/**
+ * Requirements list for admins.
+ * @route GET /api/admin/requirements
+ */
+export const getAdminRequirements = asyncHandler(async (req, res) => {
+  const { status, urgency, search, page = 1, limit = 15 } = req.query;
+  const query = {};
+  if (status && status !== 'all') query.status = status;
+  if (urgency && urgency !== 'all') query.urgency = urgency;
+  if (search) query.medicineName = { $regex: search, $options: 'i' };
+
+  const pageNum = parseInt(page, 10) || 1;
+  const limitNum = Math.min(parseInt(limit, 10) || 15, 50);
+  const skip = (pageNum - 1) * limitNum;
+
+  const [requirements, total] = await Promise.all([
+    Request.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .populate('organizationId', 'name city state pincode')
+      .populate('requestedBy', 'name email'),
+    Request.countDocuments(query),
+  ]);
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        requirements,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum),
+        },
+      },
+      'Admin requirements list retrieved.'
+    )
+  );
+});
+
+/**
+ * Verified organizations map coordinates.
+ * @route GET /api/admin/organizations/map
+ */
+export const getOrganizationsMap = asyncHandler(async (_req, res) => {
+  const organizations = await Organization.find({
+    verificationStatus: ORG_STATUS.VERIFIED,
+  }).select('name type city state pincode location servicesOffered');
+
+  res.status(200).json(
+    new ApiResponse(200, { organizations }, 'Verified organizations map data retrieved.')
+  );
+});
+
 export default {
   getOrganizations,
   getOrganizationById,
@@ -479,4 +671,9 @@ export default {
   forceReleaseDonation,
   getVerificationLog,
   getVerificationSummary,
+  getMatchingSummary,
+  getAdminClaims,
+  cancelAdminClaim,
+  getAdminRequirements,
+  getOrganizationsMap,
 };

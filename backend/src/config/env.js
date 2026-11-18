@@ -32,6 +32,21 @@ const envSchema = z.object({
     .transform((val) => val === 'true'),
   VERIFICATION_CLAIM_TTL_MINUTES: z.string().default('60').transform(Number),
 
+  // Geo Matching & Claims (Phase 6)
+  CLAIM_RESPONSE_TTL_HOURS: z.string().default('72').transform(Number),
+  MAX_OPEN_REQUIREMENTS_PER_ORG: z.string().default('10').transform(Number),
+  MAX_PENDING_CLAIMS_PER_ORG: z.string().default('5').transform(Number),
+  GEO_RADII_KM: z
+    .string()
+    .default('5,10,20')
+    .transform((val) =>
+      val
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => !isNaN(n) && n > 0)
+    ),
+  DEFAULT_RADIUS_KM: z.string().default('10').transform(Number),
+
   // Admin Seeding credentials
   ADMIN_NAME: z.string().default('System Administrator'),
   ADMIN_EMAIL: z.string().email().default('admin@medibridge.local'),

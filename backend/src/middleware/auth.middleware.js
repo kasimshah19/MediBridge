@@ -70,4 +70,6 @@ export const protect = asyncHandler(async (req, _res, next) => {
   next();
 });
 
+export const authenticate = protect;
+
 export default protect;

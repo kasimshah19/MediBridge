@@ -9,12 +9,17 @@ import {
   AUDIT_ACTIONS,
   NOTIFICATION_TYPES,
   ROLES,
+  CLAIM_STATUS,
+  CLAIM_INITIATOR,
+  REQUEST_STATUS,
 } from '../config/constants.js';
 import Medicine from '../models/Medicine.js';
 import Donation from '../models/Donation.js';
 import JobRun from '../models/JobRun.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
+import Claim from '../models/Claim.js';
+import Request from '../models/Request.js';
 import ApiError from '../utils/ApiError.js';
 import recordAuditLog from './audit.service.js';
 import { sendExpiryAlertEmail } from './email.service.js';
@@ -229,6 +234,7 @@ export const runExpiryCheck = async ({
 
     const sampleChanges = [];
     const affectedDonationIds = new Set();
+    const newlyExpiredMedicineIds = [];
 
     // Map: donorId -> { d90: [item], d30: [item], d7: [item], expired: [item] }
     const donorAlertsMap = new Map();
@@ -266,6 +272,7 @@ export const runExpiryCheck = async ({
         // Item is newly expired
         newlyExpired++;
         affectedDonationIds.add(item.donationId.toString());
+        newlyExpiredMedicineIds.push(item._id);
 
         if (sampleChanges.length < 50) {
           sampleChanges.push({
@@ -533,6 +540,86 @@ export const runExpiryCheck = async ({
           });
           notificationsCreated++;
         }
+      }
+
+      // 6. Phase 6 Matching & Claims interplay
+      if (newlyExpiredMedicineIds.length > 0) {
+        // Auto-cancel pending claims referencing newly expired medicines
+        const affectedPendingClaims = await Claim.find({
+          status: CLAIM_STATUS.PENDING,
+          medicineIds: { $in: newlyExpiredMedicineIds },
+        });
+
+        for (const claim of affectedPendingClaims) {
+          claim.status = CLAIM_STATUS.CANCELLED;
+          claim.statusHistory.push({
+            status: CLAIM_STATUS.CANCELLED,
+            note: 'Auto-cancelled: One or more requested medicines expired',
+            at: executionAsOf,
+          });
+          await claim.save();
+
+          await Notification.create({
+            userId: claim.initiatedByUserId,
+            title: 'Claim Auto-Cancelled',
+            message: `Claim ${claim.claimCode} was auto-cancelled because one or more requested medicines expired.`,
+            type: NOTIFICATION_TYPES.MATCH_CANCELLED,
+            link: claim.initiatedBy === CLAIM_INITIATOR.NGO ? '/ngo/matches' : '/donor/matches',
+          });
+
+          await recordAuditLog({
+            action: AUDIT_ACTIONS.CLAIM_AUTO_CANCELLED_EXPIRY,
+            actorType: 'system',
+            meta: { claimId: claim._id, claimCode: claim.claimCode },
+          });
+        }
+      }
+
+      // Expire stale pending claims past TTL
+      const staleClaims = await Claim.find({
+        status: CLAIM_STATUS.PENDING,
+        expiresAt: { $lte: executionAsOf },
+      });
+
+      for (const stale of staleClaims) {
+        stale.status = CLAIM_STATUS.EXPIRED;
+        stale.statusHistory.push({
+          status: CLAIM_STATUS.EXPIRED,
+          note: 'Claim response window expired',
+          at: executionAsOf,
+        });
+        await stale.save();
+
+        await Notification.create({
+          userId: stale.initiatedByUserId,
+          title: 'Claim Expired',
+          message: `Claim ${stale.claimCode} has expired as the response window closed.`,
+          type: NOTIFICATION_TYPES.MATCH_EXPIRED,
+          link: stale.initiatedBy === CLAIM_INITIATOR.NGO ? '/ngo/matches' : '/donor/matches',
+        });
+
+        await recordAuditLog({
+          action: AUDIT_ACTIONS.CLAIM_EXPIRED,
+          actorType: 'system',
+          meta: { claimId: stale._id, claimCode: stale.claimCode },
+        });
+      }
+
+      // Expire requirements past neededBy date
+      const expiredRequirements = await Request.find({
+        status: REQUEST_STATUS.OPEN,
+        neededBy: { $lt: executionAsOf },
+      });
+
+      for (const req of expiredRequirements) {
+        req.status = REQUEST_STATUS.EXPIRED;
+        req.closedReason = 'Requirement neededBy date has passed';
+        req.statusHistory.push({
+          status: REQUEST_STATUS.EXPIRED,
+          note: 'Automatically marked expired past neededBy date',
+          at: executionAsOf,
+        });
+        await req.save();
       }
     }
 

@@ -408,11 +408,140 @@ Donation status is deterministically derived from its constituent medicine item 
 
 | Medicine Items Condition | Derived Donation Status | Description |
 | ------------------------ | ----------------------- | ----------- |
-| All items `approved` | `approved` | Whole donation is verified and ready for NGO allocation |
-| All items `rejected` | `rejected` | All items failed physical safety verification |
-| ≥1 `approved` AND ≥1 `rejected` (0 pending/more_info) | `partially_approved` | Only approved items will be matched; rejected items retired |
-| ≥1 item `more_info_required` | `more_info_required` | Waiting for donor clarification or additional photos |
-| ≥1 item `pending` (0 more_info) | `under_verification` | Items still awaiting pharmacist decision |
+| ≥1 item `pending` | `under_verification` | Items still awaiting pharmacist decision |
+| Else ≥1 item `more_info_required` | `more_info_required` | Waiting for donor clarification or additional photos |
+| Else ≥1 item `approved` (unreserved) | `approved` | At least 1 approved item remains available for matching |
+| Else ≥1 item `reserved` (0 approved) | `matched` | All eligible items reserved under accepted claim(s) |
+| Else (all `rejected` / `expired` / `cancelled`) | `rejected` | All items failed verification or expired |
+
+---
+
+## 🗺️ Phase 6: Geospatial Matching & Claims System
+
+### 1. Matching Workflow
+
+```
+[Donation Approved]
+        │
+        ├───────────────────────────────────────────┐
+        ▼                                           ▼
+[Donor Browses Nearby NGOs]                [NGO Finds Available Meds]
+GET /api/donations/:id/nearby-orgs          GET /api/ngo/available
+(Radius: 5 / 10 / 20 km)                    (Approximate location ~1.1km)
+        │                                           │
+        ▼                                           ▼
+[Donor Offers Medicines]                   [NGO Claims Medicines]
+POST /api/claims (initiator: donor)         POST /api/claims (initiator: ngo)
+        │                                           │
+        └─────────────────────┬─────────────────────┘
+                              ▼
+                       [Claim Pending]
+                    (TTL: 72 hours window)
+                              │
+             ┌────────────────┼────────────────┐
+             ▼                ▼                ▼
+         [DECLINE]        [WITHDRAW]        [EXPIRE]
+      Reason required   Initiator only    Auto-expired
+      (24h cooldown)                      by expiry job
+             │
+             ▼
+         [ACCEPT]
+   (Counterparty only)
+             │
+             ├─ Atomic reservation of items: status -> "reserved"
+             ├─ Competing pending claims automatically -> "superseded"
+             ├─ Donation derived status updates -> "matched"
+             ├─ Linked NGO requirement fulfilledQuantity updated
+             └─ Handover contact details unlocked with audit trail
+             │
+             ▼
+      [CLAIM ACCEPTED]
+      (Mutual contact unlocked)
+             │
+             ├─ [Handover Details]: Revealed to Donor & NGO
+             └─ [Cancel Match]: Reverts items & donation to "approved"
+```
+
+### 2. Match Scoring Algorithm (0–100 Score)
+
+Match ranking uses a multi-factor scoring formula:
+
+$$\text{Score} = \text{Name Match (50)} + \text{Urgency (20)} + \text{Proximity (15)} + \text{Shelf Life (15)}$$
+
+- **Medicine Name Match (Max 50 pts)**:
+  - Exact normalized name or genericName match: **50 pts**
+  - Token overlap $\ge 50\%$: **30 pts**
+  - No match / General browse: **0 pts**
+- **Requirement Urgency (Max 20 pts)**:
+  - Urgent requirement: **20 pts**
+  - Soon requirement: **12 pts**
+  - Routine requirement: **5 pts**
+- **Geographic Proximity (Max 15 pts)**:
+  - Linear decay: $\text{round}(15 \times (1 - \frac{\text{distance}}{\text{maxRadius}}))$
+- **Remaining Shelf Life (Max 15 pts)**:
+  - $> 180$ days left: **15 pts**
+  - $91 - 180$ days left: **10 pts**
+  - $31 - 90$ days left: **5 pts**
+
+### 3. Privacy & Anti-Surveillance Matrix
+
+| Stage | What Donor Sees | What NGO Sees | Public / Others |
+| ----- | --------------- | ------------- | --------------- |
+| **Search / Browse** | NGO Name, Type, City, Distance, Open Requirements Count | Approximate Location (~1.1 km grid), City, Medicine Details, Batch, Expiry, Distance, Match Score | Redacted (Institution city & verified pins only) |
+| **Pending Claim** | NGO Name, Type, City, Services, Requested Items, Message | Donation Code, Approximate Area, Requested Items, Message | 403 Forbidden |
+| **Accepted Match** | NGO Contact Person, Phone, Email, Full Street Address, Operating Hours | Donor Full Name, Phone, Full Pickup Address Line 1, Pincode, Preferred Timings | 403 Forbidden |
+| **Audit Requirement** | Logged under `CLAIM_CONTACT_REVEALED` without raw phone numbers | Logged under `CLAIM_CONTACT_REVEALED` without raw phone numbers | Immutable audit trail |
+
+### 4. Phase 6 Endpoints
+
+#### Geospatial & Discovery
+- `GET /api/geo/organizations/nearby?lat=&lng=&radiusKm=&type=&search=` — Find verified organizations within radius (Donor/Admin)
+- `GET /api/donations/:id/nearby-organizations?radiusKm=&sort=` — Nearby organizations matching donation items (Donor Owner/Admin)
+
+#### NGO Requirements
+- `POST /api/requirements` — Post a new medicine requirement (Verified NGO)
+- `GET /api/requirements/my?status=&search=&page=&limit=` — List organization's requirements (Verified NGO)
+- `GET /api/requirements/:id` — Get single requirement details
+- `PATCH /api/requirements/:id` — Update quantityNeeded, urgency, description, neededBy
+- `POST /api/requirements/:id/close` — Close open requirement
+- `GET /api/ngo/summary` — NGO dashboard statistics (Open reqs, offers, pending, matches)
+- `GET /api/ngo/available?radiusKm=&search=&type=&priority=&matchOnly=&sort=&page=&limit=` — Find nearby available inventory
+
+#### Claims Management
+- `POST /api/claims` — Create claim request or donation offer
+- `GET /api/claims/my?tab=incoming|outgoing|accepted|closed&page=&limit=` — Tabbed claims list
+- `GET /api/claims/:id` — View claim summary and public party info
+- `GET /api/claims/:id/handover-details` — View mutual contact details (Accepted claims only)
+- `POST /api/claims/:id/accept` — Accept pending claim (Atomically reserves items)
+- `POST /api/claims/:id/decline` — Decline pending claim (Enforces 24h cooldown)
+- `POST /api/claims/:id/withdraw` — Withdraw pending claim (Initiator only)
+- `POST /api/claims/:id/cancel` — Cancel accepted match (Reverts items to approved)
+
+#### Admin Operations
+- `GET /api/admin/matching/summary` — Overview of matching activities and queues
+- `GET /api/admin/claims?status=&search=&from=&to=&page=` — Master claims registry
+- `POST /api/admin/claims/:id/cancel` — Force-cancel claim with audit log
+- `GET /api/admin/requirements?status=&urgency=&search=&page=` — Requirements directory
+- `GET /api/admin/organizations/map` — Geo-coordinates of all verified organizations
+
+### 5. CLI Verification & Dev Tools
+
+```bash
+# 1. Inspect 2dsphere indexes and confirm $geoNear execution plan
+npm run geo:check
+
+# 2. Run full 12-step end-to-end integration walkthrough
+npm run verify:phase6
+
+# 3. Development location simulator (Development environment only)
+npm run dev:set-location -- org <email-or-id> <lat> <lng>
+npm run dev:set-location -- donation <donationCode> <lat> <lng>
+
+# 4. Run entire test suite (11 suites, 133 tests)
+npm test
+```
+
+---
 
 ### 3. Verification Claim TTL & Concurrency Guard
 

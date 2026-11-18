@@ -260,6 +260,13 @@ export const NOTIFICATION_TYPES = {
   VERIFICATION_REJECTED: 'verification_rejected',
   VERIFICATION_MORE_INFO: 'verification_more_info',
   VERIFICATION_NEW_REQUEST: 'verification_new_request',
+  MATCH_REQUEST_RECEIVED: 'match_request_received',
+  MATCH_OFFER_RECEIVED: 'match_offer_received',
+  MATCH_ACCEPTED: 'match_accepted',
+  MATCH_DECLINED: 'match_declined',
+  MATCH_CANCELLED: 'match_cancelled',
+  MATCH_EXPIRED: 'match_expired',
+  REQUIREMENT_FULFILLED: 'requirement_fulfilled',
 };
 
 export const NOTIFICATION_TYPES_ARRAY = Object.values(NOTIFICATION_TYPES);
@@ -336,14 +343,55 @@ export const CHECKLIST_DESCRIPTIONS = {
   policyEligible: 'Eligible under donation policy',
 };
 
+// Requirement urgency levels
+export const REQUIREMENT_URGENCY = {
+  ROUTINE: 'routine',
+  SOON: 'soon',
+  URGENT: 'urgent',
+};
+
+export const REQUIREMENT_URGENCY_ARRAY = Object.values(REQUIREMENT_URGENCY);
+
 // Request status
 export const REQUEST_STATUS = {
   OPEN: 'open',
   FULFILLED: 'fulfilled',
   CLOSED: 'closed',
+  EXPIRED: 'expired',
 };
 
 export const REQUEST_STATUS_ARRAY = Object.values(REQUEST_STATUS);
+
+// Claim status
+export const CLAIM_STATUS = {
+  PENDING: 'pending',
+  ACCEPTED: 'accepted',
+  DECLINED: 'declined',
+  WITHDRAWN: 'withdrawn',
+  CANCELLED: 'cancelled',
+  EXPIRED: 'expired',
+  SUPERSEDED: 'superseded',
+};
+
+export const CLAIM_STATUS_ARRAY = Object.values(CLAIM_STATUS);
+
+// Claim initiator
+export const CLAIM_INITIATOR = {
+  NGO: 'ngo',
+  DONOR: 'donor',
+};
+
+export const CLAIM_INITIATOR_ARRAY = Object.values(CLAIM_INITIATOR);
+
+// Geospatial search radii (km)
+export const GEO_RADII_KM = [5, 10, 20];
+export const DEFAULT_RADIUS_KM = 10;
+export const MAX_RADIUS_KM = 20;
+
+// Phase 6 Matching policy limits
+export const MAX_OPEN_REQUIREMENTS_PER_ORG = 10;
+export const MAX_PENDING_CLAIMS_PER_ORG = 5;
+export const CLAIM_RESPONSE_TTL_HOURS = 72;
 
 // Transfer / chain of custody status
 export const TRANSFER_STATUS = {
@@ -395,6 +443,18 @@ export const AUDIT_ACTIONS = {
   VERIFICATION_MORE_INFO_REQUESTED: 'VERIFICATION_MORE_INFO_REQUESTED',
   DONOR_MORE_INFO_RESPONDED: 'DONOR_MORE_INFO_RESPONDED',
   VERIFICATION_ADMIN_FORCE_RELEASE: 'VERIFICATION_ADMIN_FORCE_RELEASE',
+  REQUIREMENT_CREATED: 'REQUIREMENT_CREATED',
+  REQUIREMENT_UPDATED: 'REQUIREMENT_UPDATED',
+  REQUIREMENT_CLOSED: 'REQUIREMENT_CLOSED',
+  CLAIM_CREATED: 'CLAIM_CREATED',
+  CLAIM_ACCEPTED: 'CLAIM_ACCEPTED',
+  CLAIM_DECLINED: 'CLAIM_DECLINED',
+  CLAIM_WITHDRAWN: 'CLAIM_WITHDRAWN',
+  CLAIM_CANCELLED: 'CLAIM_CANCELLED',
+  CLAIM_EXPIRED: 'CLAIM_EXPIRED',
+  CLAIM_AUTO_CANCELLED_EXPIRY: 'CLAIM_AUTO_CANCELLED_EXPIRY',
+  CLAIM_CONTACT_REVEALED: 'CLAIM_CONTACT_REVEALED',
+  CLAIM_ADMIN_CANCELLED: 'CLAIM_ADMIN_CANCELLED',
 };
 
 export const AUDIT_ACTIONS_ARRAY = Object.values(AUDIT_ACTIONS);

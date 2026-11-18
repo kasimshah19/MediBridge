@@ -223,6 +223,25 @@ const medicineSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    reservation: {
+      type: {
+        claimId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Claim',
+          default: null,
+        },
+        organizationId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Organization',
+          default: null,
+        },
+        reservedAt: {
+          type: Date,
+          default: null,
+        },
+      },
+      default: null,
+    },
   },
   {
     timestamps: true,

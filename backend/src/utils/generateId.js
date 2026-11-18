@@ -43,8 +43,17 @@ export const generateMedicineId = async (session = null) => {
   return generateSequentialId('MED', session);
 };
 
+/**
+ * Generate a unique claim match code: CLM-YYYY-000001
+ * @param {import('mongoose').ClientSession} [session]
+ */
+export const generateClaimCode = async (session = null) => {
+  return generateSequentialId('CLM', session);
+};
+
 export default {
   generateSequentialId,
   generateDonationCode,
   generateMedicineId,
+  generateClaimCode,
 };

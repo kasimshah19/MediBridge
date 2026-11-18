@@ -17,6 +17,7 @@ import {
   submitDonation,
   cancelDonation,
   respondToMoreInfo,
+  getNearbyOrganizationsForDonation,
 } from '../controllers/donation.controller.js';
 import {
   createDonationSchema,
@@ -61,6 +62,7 @@ router.get(
 
 // 2. Fetch specific donation details (Owner, Admin, or Approved Pharmacist)
 router.get('/:id', protect, getDonationById);
+router.get('/:id/nearby-organizations', protect, getNearbyOrganizationsForDonation);
 
 // 3. Donor-only management routes
 router.use(protect, authorizeRoles(ROLES.DONOR));

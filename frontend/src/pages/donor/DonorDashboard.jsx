@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   FileText,
   Calendar,
+  HeartHandshake,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
@@ -129,6 +130,35 @@ export default function DonorDashboard() {
               className="bg-amber-600 hover:bg-amber-700 text-white font-bold w-full sm:w-auto text-xs"
             >
               <span>Review & Respond</span>
+              <ArrowRight size={13} className="ml-1.5" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Action Needed Banner: Incoming Requests from NGOs */}
+      {summary?.incomingRequests > 0 && (
+        <div className="bg-teal-500/10 border-2 border-teal-500/30 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-soft">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+              <HeartHandshake size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-heading font-bold text-teal-950">
+                New Medicine Requests Received ({summary.incomingRequests})
+              </h3>
+              <p className="text-xs text-teal-900/80 mt-0.5 leading-relaxed">
+                Healthcare organizations nearby have requested medicines from your approved donations. Review and accept to unlock handover.
+              </p>
+            </div>
+          </div>
+          <Link to="/donor/matches?tab=incoming" className="flex-shrink-0 w-full sm:w-auto">
+            <Button
+              variant="primary"
+              size="sm"
+              className="bg-teal-600 hover:bg-teal-700 text-white font-bold w-full sm:w-auto text-xs"
+            >
+              <span>View Requests</span>
               <ArrowRight size={13} className="ml-1.5" />
             </Button>
           </Link>

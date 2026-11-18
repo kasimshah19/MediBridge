@@ -15,6 +15,10 @@ import {
   Activity,
   LogOut,
   Stethoscope,
+  MapPin,
+  HeartHandshake,
+  Search,
+  FilePlus,
 } from 'lucide-react';
 import { useAuth, getDashboardPathForUser } from '../../context/AuthContext';
 import Logo from '../common/Logo';
@@ -60,6 +64,12 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
         active: location.pathname.startsWith('/admin/pharmacists'),
       },
       {
+        name: 'Matching & Claims',
+        path: '/admin/matching',
+        icon: HeartHandshake,
+        active: location.pathname.startsWith('/admin/matching'),
+      },
+      {
         name: 'Expiry Tracker',
         path: '/admin/expiry',
         icon: Clock,
@@ -102,12 +112,32 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
 
   // NGO active navigation
   if (user.role === 'ngo') {
-    primaryNav.push({
-      name: 'Organization Profile',
-      path: '/ngo/onboarding',
-      icon: Building2,
-      active: location.pathname === '/ngo/onboarding',
-    });
+    primaryNav.push(
+      {
+        name: 'Find Medicines',
+        path: '/ngo/find',
+        icon: Search,
+        active: location.pathname.startsWith('/ngo/find'),
+      },
+      {
+        name: 'Requirements',
+        path: '/ngo/requirements',
+        icon: FilePlus,
+        active: location.pathname.startsWith('/ngo/requirements'),
+      },
+      {
+        name: 'Matches & Claims',
+        path: '/ngo/matches',
+        icon: HeartHandshake,
+        active: location.pathname.startsWith('/ngo/matches'),
+      },
+      {
+        name: 'Organization Profile',
+        path: '/ngo/onboarding',
+        icon: Building2,
+        active: location.pathname === '/ngo/onboarding',
+      }
+    );
   }
 
   // Donor active navigation
@@ -128,6 +158,18 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
         active: location.pathname.startsWith('/donor/donations'),
       },
       {
+        name: 'Nearby NGOs',
+        path: '/donor/nearby',
+        icon: MapPin,
+        active: location.pathname.startsWith('/donor/nearby'),
+      },
+      {
+        name: 'Matches & Claims',
+        path: '/donor/matches',
+        icon: HeartHandshake,
+        active: location.pathname.startsWith('/donor/matches'),
+      },
+      {
         name: 'Expiry Tracker',
         path: '/donor/expiry',
         icon: Clock,
@@ -142,12 +184,9 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
       { name: 'QR Handover Tracking', icon: QrCode, phase: 'Phase 7' },
     ],
     pharmacist: [
-      { name: 'NGO Allocation & Matching', icon: Building2, phase: 'Phase 6' },
       { name: 'QR Handover Tracking', icon: QrCode, phase: 'Phase 7' },
     ],
     ngo: [
-      { name: 'Browse Available Meds', icon: Building2, phase: 'Phase 6' },
-      { name: 'Urgent Requests', icon: GitPullRequest, phase: 'Phase 6' },
       { name: 'QR Handover Log', icon: QrCode, phase: 'Phase 7' },
     ],
     admin: [
