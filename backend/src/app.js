@@ -89,6 +89,18 @@ app.use((req, _res, next) => {
   next();
 });
 
+// Root endpoint - friendly API welcome message
+app.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    app: 'MediBridge Backend API',
+    status: 'online',
+    health: '/api/health',
+    frontend: process.env.CLIENT_URL || 'https://medi-bridge-taupe.vercel.app',
+    message: 'Welcome to the MediBridge API service. For the user interface, please visit the frontend.',
+  });
+});
+
 // API routes
 app.use('/api', routes);
 
