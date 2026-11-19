@@ -6,6 +6,17 @@ MediBridge connects donors, pharmacists, and NGOs on a trusted platform to ensur
 
 ---
 
+## 🌐 Live Deployments
+
+| Component | Platform | Live URL | Status |
+| :--- | :--- | :--- | :--- |
+| **Frontend App** | **Vercel** | [https://medi-bridge-taupe.vercel.app](https://medi-bridge-taupe.vercel.app) | ![Vercel](https://img.shields.io/badge/Vercel-Deployed-success?style=flat&logo=vercel) |
+| **Backend API** | **Render** | [https://medibridge-5n0o.onrender.com](https://medibridge-5n0o.onrender.com) | ![Render](https://img.shields.io/badge/Render-Live-success?style=flat&logo=render) |
+| **API Health Check** | **Render** | [https://medibridge-5n0o.onrender.com/api/health](https://medibridge-5n0o.onrender.com/api/health) | ![Health](https://img.shields.io/badge/Health-200%20OK-brightgreen?style=flat) |
+| **Database** | **MongoDB Atlas** | `Cluster0 (Cloud)` | ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?style=flat&logo=mongodb) |
+
+---
+
 ## 🚀 Tech Stack
 
 | Layer       | Technology                                      |
