@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   HeartHandshake,
   GitPullRequest,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
