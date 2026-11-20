@@ -27,6 +27,8 @@ export const authorizeRoles = (...roles) => {
   };
 };
 
+export const authorize = authorizeRoles;
+
 /**
  * Middleware that requires the user to have the PHARMACIST role AND an APPROVED license status.
  * Returns 403 with a specific, friendly explanation if the pharmacist is still pending or rejected.

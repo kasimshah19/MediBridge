@@ -2,6 +2,13 @@
 
 **Medicine Donation, Verification & Redistribution Management Platform**
 
+[![CI](https://github.com/kasimshah19/MediBridge/actions/workflows/ci.yml/badge.svg)](https://github.com/kasimshah19/MediBridge/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Node: >=20](https://img.shields.io/badge/Node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org/)
+[![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?logo=vercel)](https://medi-bridge-taupe.vercel.app)
+[![Render](https://img.shields.io/badge/Render-Online-46E3B7?logo=render)](https://medibridge-5n0o.onrender.com)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas%20Cluster-47A248?logo=mongodb)](https://www.mongodb.com/cloud/atlas)
+
 MediBridge connects donors, pharmacists, and NGOs on a trusted platform to ensure unused, sealed medicines reach those who need them most. Every donated medicine goes through pharmacist verification, geo-based matching, and QR-coded chain of custody tracking.
 
 ---
@@ -640,9 +647,88 @@ npm run backfill:phase7
 # 2. Cryptographically audit all medicine custody hash chains in the database
 npm run custody:verify
 
-# 3. Run full test suite across all 14 test suites
+# 3. Run full test suite across all 17 test suites (169 tests)
 npm test
 ```
+
+---
+
+## 📊 Phase 8: Admin Analytics, Security Hardening, Reports & Deployment
+
+### 1. Executive Real-Time Analytics Engine
+
+MediBridge features a zero-mock, real-time analytics engine powered entirely by performant MongoDB aggregation pipelines:
+- **11 Real-Time KPIs with Period-Over-Period Trends**: Track donations submitted, medicines screened, pharmacist approval rate, wastage prevented units, average verification hours, active donors, and verified NGOs with percentage changes against the preceding period.
+- **IST & en-IN Formatting**: Date intervals are calculated in Indian Standard Time (`Asia/Kolkata`) using `$dateTrunc`, formatted with Indian numbering separators (Lakhs / Crores).
+- **Zero-Filled Timeseries**: Aggregations automatically detect empty periods and return zero-filled buckets for clean, unbroken Recharts visualizations.
+- **In-Memory TTL Cache**: High-concurrency protection with in-memory caching (`ANALYTICS_CACHE_SECONDS=60`).
+- **Strict Privacy Guarantees**: Deep-scanned to ensure no PII (phone, email, donor address, exact coordinates) is ever returned in analytics responses.
+
+### 2. Platform Compliance & Vector Reports
+
+- **Vector PDF Summaries (PDFKit)**: Platform summaries rendered in A4 format with MediBridge branding, executive KPI tables, custom vector-drawn timeseries charts, funnel conversion tables, and statutory compliance disclaimers.
+- **High-Speed Streamed CSV Exports**: Cursor-streamed CSV exports for donations, verifications, handovers, and audit trails. Includes UTF-8 BOM encoding for Excel compatibility and spreadsheet formula injection defense (prefixing cells starting with `=`, `+`, `-`, `@`, `\t` with a single quote).
+- **Admin Rate Limiting**: Centralized rate limiters capping report generation at 20 requests per hour per administrator.
+
+### 3. User Governance & Instant Session Revocation
+
+- **Immediate Token Invalidation (`tokenVersion`)**: The `User` model stores an integer `tokenVersion` included in JWT claims. When an administrator suspends, blocks, or reactivates an account, `tokenVersion` increments, instantly invalidating all active sessions.
+- **Safety Checks**: Administrators cannot suspend or block themselves or other administrators.
+- **Audit Logging**: Every status transition is logged to `AuditLog` (`USER_SUSPENDED`, `USER_REACTIVATED`, `USER_BLOCKED`) with a mandatory reason.
+
+### 4. Dual-Driver Storage Architecture (Local & GridFS)
+
+- **Storage Driver Abstraction**: Unified interface supports both zero-dependency local disk (`local`) and cloud-native MongoDB GridFS (`gridfs` bucket: `medibridge_files`).
+- **Sharp Image Pipeline**: Auto-orients medicine photos, strips EXIF metadata (removing camera GPS coordinates), bounds long dimensions to 1600px, and re-compresses to JPEG quality 80.
+- **Migration & Cleanup CLI**:
+  ```bash
+  # Migrate disk uploads to MongoDB GridFS
+  npm run storage:migrate
+
+  # Audit and prune unreferenced orphan files
+  npm run storage:orphans
+  ```
+
+### 5. Automated Retention & Cold Start Mitigation
+
+- **Notification Retention Purge**: Scheduled cleanup automatically purges read notifications older than `NOTIFICATION_RETENTION_DAYS` (default 90 days), while strictly preserving unread notifications.
+- **Cold-Start Auto-Retry**: Frontend Axios client automatically intercepts 502/503/504 gateway timeouts from Render free tier, displays an animated `ServerWakingBanner`, and automatically retries requests until the backend is warm.
+
+### 6. Phase 8 Endpoints
+
+#### Analytics API (`/api/admin/analytics/*`)
+- `GET /overview` — Executive KPIs with previous-period comparison
+- `GET /timeseries?metric=` — Time-bucketed trends (donations, medicines, handovers, etc.)
+- `GET /funnel` — End-to-end medicine conversion funnel
+- `GET /rejections` — Auto-screening and pharmacist rejection reason distributions
+- `GET /expiry` — Priority distribution and 12-month expiry timeline
+- `GET /top-medicines` — Top donated vs requested medicine names
+- `GET /organizations` — Verified NGO performance benchmarks
+- `GET /pharmacists` — Pharmacist turnaround and approval benchmarks
+- `GET /geo` — Geo-density coordinates (rounded 2 decimals)
+- `GET /system` — Platform infrastructure and health metrics
+
+#### Reports & User Governance
+- `GET /api/admin/reports/:type?format=pdf|csv` — Generate compliance PDF or streamed CSV
+- `GET /api/admin/users/all` — Paginated user directory with role and status filters
+- `PATCH /api/admin/users/:id/status` — Suspend, reactivate, or block user
+- `GET /api/admin/audit` — Immutable audit log viewer with masked IPs
+- `GET /api/admin/audit/export.csv` — CSV export of system audit trail
+- `GET /api/health/ready` — Production readiness probe verifying MongoDB and storage health
+
+---
+
+## ✅ Implementation Checklist (Phases 0 to 8)
+
+- [x] **Phase 0: Project Architecture & Setup** (Monorepo, ESLint, Tailwind v4, Express, Mongoose)
+- [x] **Phase 1: Authentication, Authorization & Roles** (JWT, bcrypt, cookie sessions, RBAC)
+- [x] **Phase 2: Organization Onboarding & Admin Review** (NGO/Pharmacy registration, license uploads)
+- [x] **Phase 3: Notifications & Real-Time Alerts** (In-app notification center, unread counters, email service)
+- [x] **Phase 4: Medicine Donations & Automated Safety Screening** (Multi-item donations, expiry rules, ban checks)
+- [x] **Phase 5: Pharmacist Verification Workflow** (Claim locking, 6-point checklist, more-info loops)
+- [x] **Phase 6: Geospatial Matching & NGO Claims** (2dsphere geo queries, 48-hr reservation holds)
+- [x] **Phase 7: Digital QR Passports & Cryptographic Chain of Custody** (HMAC-SHA256 QR, SHA-256 hash chaining, handover passes)
+- [x] **Phase 8: Admin Analytics, Security Hardening, Reports & Deployment** (MongoDB aggregations, PDFKit, GridFS, tokenVersion, rate limits, Playwright E2E)
 
 ---
 

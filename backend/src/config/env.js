@@ -78,6 +78,23 @@ const envSchema = z.object({
   SMTP_PORT: z.string().optional().transform((val) => (val ? Number(val) : undefined)),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+
+  // Storage Driver & Optimization (Phase 8)
+  STORAGE_DRIVER: z
+    .enum(['local', 'gridfs'])
+    .default(process.env.NODE_ENV === 'production' ? 'gridfs' : 'local'),
+
+  // Networking & Reverse Proxy
+  TRUST_PROXY_HOPS: z.string().default('2').transform(Number),
+
+  // Analytics & Reports
+  ANALYTICS_CACHE_SECONDS: z.string().default('60').transform(Number),
+  REPORT_MAX_ROWS_CSV: z.string().default('5000').transform(Number),
+  REPORT_MAX_ROWS_PDF: z.string().default('500').transform(Number),
+
+  // Data Retention & Logging
+  NOTIFICATION_RETENTION_DAYS: z.string().default('90').transform(Number),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -90,8 +107,21 @@ if (!parsed.success) {
 
 const env = parsed.data;
 
-// In production, ensure CRON_SECRET and QR_SIGNING_SECRET are not placeholders and meet length requirements
+// In production, ensure secrets are not placeholders and meet length requirements
 if (env.NODE_ENV === 'production') {
+  if (
+    !env.JWT_SECRET ||
+    env.JWT_SECRET.toLowerCase().includes('change_this') ||
+    env.JWT_SECRET.toLowerCase().includes('placeholder') ||
+    env.JWT_SECRET.toLowerCase().includes('replace_with') ||
+    env.JWT_SECRET.length < 32
+  ) {
+    console.error(
+      '❌ Fatal: JWT_SECRET must be configured with a secure random string of at least 32 characters in production.'
+    );
+    process.exit(1);
+  }
+
   if (
     !env.CRON_SECRET ||
     env.CRON_SECRET.toLowerCase().includes('change_this') ||

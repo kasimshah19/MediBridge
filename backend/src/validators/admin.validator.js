@@ -40,7 +40,28 @@ export const reviewUserSchema = z
     }
   );
 
+export const updateUserStatusSchema = z
+  .object({
+    action: z.enum(['suspend', 'reactivate', 'block'], {
+      errorMap: () => ({ message: 'Action must be "suspend", "reactivate", or "block"' }),
+    }),
+    reason: z.string().trim().optional().default(''),
+  })
+  .refine(
+    (data) => {
+      if (['suspend', 'block'].includes(data.action)) {
+        return Boolean(data.reason && data.reason.length >= 10);
+      }
+      return true;
+    },
+    {
+      message: 'A reason note of at least 10 characters is required when suspending or blocking a user',
+      path: ['reason'],
+    }
+  );
+
 export default {
   reviewOrgSchema,
   reviewUserSchema,
+  updateUserStatusSchema,
 };

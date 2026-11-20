@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /for-ngos
+Allow: /terms
+Allow: /privacy
+Allow: /verify
+Disallow: /donor/
+Disallow: /pharmacist/
+Disallow: /ngo/
+Disallow: /admin/
+Disallow: /profile
+Disallow: /notifications
+
+Sitemap: https://medi-bridge-taupe.vercel.app/sitemap.xml

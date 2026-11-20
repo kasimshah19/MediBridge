@@ -4,23 +4,40 @@ import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 
 /**
- * Get recent notifications for the logged-in user with unread count.
+ * Get notifications for the logged-in user with pagination and unread filtering.
  * @route GET /api/notifications
  */
 export const getNotifications = asyncHandler(async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 50);
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+  const skip = (page - 1) * limit;
+  const unreadOnly = req.query.unreadOnly === 'true';
 
-  const [notifications, unreadCount] = await Promise.all([
-    Notification.find({ userId: req.user._id })
+  const query = { userId: req.user._id };
+  if (unreadOnly) {
+    query.isRead = false;
+  }
+
+  const [notifications, total, unreadCount] = await Promise.all([
+    Notification.find(query)
       .sort({ createdAt: -1 })
-      .limit(limit),
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Notification.countDocuments(query),
     Notification.countDocuments({ userId: req.user._id, isRead: false }),
   ]);
 
   res.status(200).json(
     new ApiResponse(
       200,
-      { notifications, unreadCount },
+      {
+        notifications,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit) || 1,
+        unreadCount,
+      },
       'Notifications retrieved successfully.'
     )
   );
@@ -72,8 +89,58 @@ export const markAllAsRead = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Delete a single notification.
+ * @route DELETE /api/notifications/:id
+ */
+export const deleteNotification = asyncHandler(async (req, res, next) => {
+  const notification = await Notification.findOneAndDelete({
+    _id: req.params.id,
+    userId: req.user._id,
+  });
+
+  if (!notification) {
+    return next(new ApiError(404, 'Notification not found.'));
+  }
+
+  const unreadCount = await Notification.countDocuments({
+    userId: req.user._id,
+    isRead: false,
+  });
+
+  res.status(200).json(
+    new ApiResponse(200, { unreadCount }, 'Notification deleted successfully.')
+  );
+});
+
+/**
+ * Clear all read notifications for current user.
+ * @route DELETE /api/notifications
+ */
+export const clearReadNotifications = asyncHandler(async (req, res) => {
+  const result = await Notification.deleteMany({
+    userId: req.user._id,
+    isRead: true,
+  });
+
+  const unreadCount = await Notification.countDocuments({
+    userId: req.user._id,
+    isRead: false,
+  });
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      { deletedCount: result.deletedCount, unreadCount },
+      'All read notifications cleared.'
+    )
+  );
+});
+
 export default {
   getNotifications,
   markAsRead,
   markAllAsRead,
+  deleteNotification,
+  clearReadNotifications,
 };

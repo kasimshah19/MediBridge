@@ -20,6 +20,10 @@ import {
   HeartHandshake,
   Search,
   FilePlus,
+  BarChart3,
+  FileSpreadsheet,
+  ShieldAlert,
+  Bell,
 } from 'lucide-react';
 import { useAuth, getDashboardPathForUser } from '../../context/AuthContext';
 import Logo from '../common/Logo';
@@ -47,11 +51,35 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
       icon: User,
       active: location.pathname === '/profile',
     },
+    {
+      name: 'Notifications',
+      path: '/notifications',
+      icon: Bell,
+      active: location.pathname === '/notifications',
+    },
   ];
 
   // Admin active navigation
   if (user.role === 'admin') {
     primaryNav.push(
+      {
+        name: 'Analytics',
+        path: '/admin/analytics',
+        icon: BarChart3,
+        active: location.pathname.startsWith('/admin/analytics'),
+      },
+      {
+        name: 'Reports',
+        path: '/admin/reports',
+        icon: FileSpreadsheet,
+        active: location.pathname.startsWith('/admin/reports'),
+      },
+      {
+        name: 'Users',
+        path: '/admin/users',
+        icon: Users,
+        active: location.pathname.startsWith('/admin/users'),
+      },
       {
         name: 'Organizations',
         path: '/admin/organizations',
@@ -87,6 +115,12 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile = () => {} }
         path: '/admin/handovers',
         icon: ShieldCheck,
         active: location.pathname.startsWith('/admin/handovers'),
+      },
+      {
+        name: 'Audit Trail',
+        path: '/admin/audit',
+        icon: ShieldAlert,
+        active: location.pathname.startsWith('/admin/audit'),
       }
     );
   }

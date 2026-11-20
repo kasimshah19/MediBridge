@@ -1,11 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
+import hpp from 'hpp';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import mongoSanitize from 'express-mongo-sanitize';
 import mongoose from 'mongoose';
+import env from './config/env.js';
+import { httpLogger } from './utils/logger.js';
+import originCheck from './middleware/originCheck.js';
 import apiLimiter from './middleware/rateLimiter.js';
 import routes from './routes/index.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
@@ -13,12 +16,34 @@ import ApiError from './utils/ApiError.js';
 
 const app = express();
 
-// Security headers
+// Trust reverse proxy hops (e.g. Render, Vercel, Cloudflare)
+app.set('trust proxy', env.TRUST_PROXY_HOPS || 2);
+
+// Security headers with strict production controls
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    frameguard: { action: 'deny' },
+    hsts:
+      env.NODE_ENV === 'production'
+        ? {
+            maxAge: 31536000,
+            includeSubDomains: true,
+            preload: true,
+          }
+        : false,
   })
 );
+
+// Prevent HTTP parameter pollution
+app.use(hpp());
 
 // CORS configuration - supports single URL, comma-separated URLs, and Vercel preview domains
 const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
@@ -44,19 +69,20 @@ app.use(
 );
 
 // Body parsing with size limit
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 // Cookie parser
 app.use(cookieParser());
 
+// CSRF Origin verification for cookie-authenticated state changes in production
+app.use(originCheck);
+
 // Compress responses
 app.use(compression());
 
-// HTTP request logging in development
-if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));
-}
+// Structured HTTP logging with Pino
+app.use(httpLogger);
 
 // Sanitize data against NoSQL injection
 app.use(mongoSanitize());

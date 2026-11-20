@@ -23,6 +23,7 @@ import ApprovalPending from '../pages/auth/ApprovalPending';
 
 // Profile & Dashboard pages
 import Profile from '../pages/user/Profile';
+import NotificationsPage from '../pages/user/NotificationsPage';
 import DonorDashboard from '../pages/donor/DonorDashboard';
 import DonateWizard from '../pages/donor/DonateWizard';
 import MyDonations from '../pages/donor/MyDonations';
@@ -52,6 +53,10 @@ import AdminExpiry from '../pages/admin/AdminExpiry';
 import AdminVerification from '../pages/admin/AdminVerification';
 import AdminMatching from '../pages/admin/AdminMatching';
 import AdminHandoversPage from '../pages/admin/AdminHandoversPage';
+import AdminAnalyticsPage from '../pages/admin/AdminAnalyticsPage';
+import AdminReportsPage from '../pages/admin/AdminReportsPage';
+import AdminUsersPage from '../pages/admin/AdminUsersPage';
+import AdminAuditPage from '../pages/admin/AdminAuditPage';
 
 export default function AppRoutes() {
   return (
@@ -83,6 +88,7 @@ export default function AppRoutes() {
         {/* Dashboard Shell Routes */}
         <Route element={<DashboardLayout />}>
           <Route path="/profile" element={<Profile />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
 
           {/* Role-Guarded Dashboards */}
           <Route element={<ProtectedRoute allowedRoles={['donor', 'admin']} />}>
@@ -119,12 +125,16 @@ export default function AppRoutes() {
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
+            <Route path="/admin/reports" element={<AdminReportsPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/organizations" element={<AdminOrganizations />} />
             <Route path="/admin/pharmacists" element={<AdminPharmacists />} />
             <Route path="/admin/verification" element={<AdminVerification />} />
             <Route path="/admin/expiry" element={<AdminExpiry />} />
             <Route path="/admin/matching" element={<AdminMatching />} />
             <Route path="/admin/handovers" element={<AdminHandoversPage />} />
+            <Route path="/admin/audit" element={<AdminAuditPage />} />
           </Route>
         </Route>
       </Route>

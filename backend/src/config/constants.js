@@ -167,6 +167,20 @@ export const SCREENING_CODES = {
 
 export const SCREENING_CODES_ARRAY = Object.values(SCREENING_CODES);
 
+export const AUTO_SCREENING_REJECTION_REASONS = {
+  [SCREENING_CODES.EXPIRED]: 'Expired medicine',
+  [SCREENING_CODES.SHELF_LIFE_TOO_SHORT]: 'Remaining shelf life too short',
+  [SCREENING_CODES.PACKAGING_NOT_SEALED]: 'Packaging is opened or unsealed',
+  [SCREENING_CODES.LOOSE_TABLETS]: 'Loose strips or unpacked tablets',
+  [SCREENING_CODES.INJECTION_NOT_ACCEPTED]: 'Injections or vials not accepted for safety',
+  [SCREENING_CODES.COLD_CHAIN_NOT_ACCEPTED]: 'Cold-chain medicines not accepted',
+  [SCREENING_CODES.CONTROLLED_SUBSTANCE]: 'Controlled narcotic or psychotropic substance',
+  [SCREENING_CODES.BAD_STORAGE]: 'Improper or hazardous storage condition reported',
+  [SCREENING_CODES.UNREADABLE_BATCH]: 'Batch number or expiry unreadable from photos',
+  [SCREENING_CODES.DUPLICATE_ITEM]: 'Duplicate donation listing detected',
+  [SCREENING_CODES.MISSING_PHOTO]: 'Missing packaging verification photos',
+};
+
 // Controlled substances keywords (Schedule X / Narcotic / Psychotropic items)
 export const CONTROLLED_SUBSTANCE_KEYWORDS = [
   'morphine',
@@ -554,6 +568,13 @@ export const AUDIT_ACTIONS = {
   TRANSFER_REMINDER_SENT: 'TRANSFER_REMINDER_SENT',
   RECEIPT_DOWNLOADED: 'RECEIPT_DOWNLOADED',
   CUSTODY_INTEGRITY_CHECK: 'CUSTODY_INTEGRITY_CHECK',
+  USER_SUSPENDED: 'USER_SUSPENDED',
+  USER_REACTIVATED: 'USER_REACTIVATED',
+  USER_BLOCKED: 'USER_BLOCKED',
+  REPORT_GENERATED: 'REPORT_GENERATED',
+  STORAGE_MIGRATED: 'STORAGE_MIGRATED',
+  ORIGIN_CHECK_FAILED: 'ORIGIN_CHECK_FAILED',
+  ADMIN_AUDIT_EXPORTED: 'ADMIN_AUDIT_EXPORTED',
 };
 
 export const AUDIT_ACTIONS_ARRAY = Object.values(AUDIT_ACTIONS);

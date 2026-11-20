@@ -46,7 +46,18 @@ export const protect = asyncHandler(async (req, _res, next) => {
     return next(new ApiError(401, 'The account belonging to this session no longer exists.'));
   }
 
-  // 4. Check account status
+  // 4. Check token version (immediate revocation on suspend/block or password change)
+  if (
+    decoded.tokenVersion !== undefined &&
+    user.tokenVersion !== undefined &&
+    decoded.tokenVersion !== user.tokenVersion
+  ) {
+    return next(
+      new ApiError(401, 'Your session has been terminated or expired. Please sign in again.')
+    );
+  }
+
+  // 5. Check account status
   if (user.accountStatus === ACCOUNT_STATUS.BLOCKED) {
     return next(new ApiError(403, 'Your account has been blocked. Please contact support.'));
   }
@@ -55,7 +66,7 @@ export const protect = asyncHandler(async (req, _res, next) => {
     return next(new ApiError(403, 'Your account is currently suspended. Please contact support.'));
   }
 
-  // 5. Check if password changed after token was issued
+  // 6. Check if password changed after token was issued
   if (user.passwordChangedAt) {
     const changedTimestamp = parseInt(user.passwordChangedAt.getTime() / 1000, 10);
     if (decoded.iat < changedTimestamp) {

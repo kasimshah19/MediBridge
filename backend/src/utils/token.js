@@ -2,15 +2,26 @@ import jwt from 'jsonwebtoken';
 import env from '../config/env.js';
 
 /**
- * Sign JWT token for user ID.
+ * Sign JWT token for user ID or user object.
  *
- * @param {string} userId
+ * @param {string|object} userOrId
  * @param {boolean} rememberMe - Whether to extend expiry to 30 days
+ * @param {number} [tokenVersionOverride]
  * @returns {string} Signed JWT token
  */
-export const generateToken = (userId, rememberMe = false) => {
+export const generateToken = (userOrId, rememberMe = false, tokenVersionOverride) => {
+  let userId = userOrId;
+  let tokenVersion = tokenVersionOverride !== undefined ? tokenVersionOverride : 0;
+
+  if (userOrId && typeof userOrId === 'object') {
+    userId = userOrId._id || userOrId.id;
+    if (userOrId.tokenVersion !== undefined) {
+      tokenVersion = userOrId.tokenVersion;
+    }
+  }
+
   const expiresIn = rememberMe ? '30d' : env.JWT_EXPIRES_IN;
-  return jwt.sign({ id: userId }, env.JWT_SECRET, { expiresIn });
+  return jwt.sign({ id: userId, tokenVersion }, env.JWT_SECRET, { expiresIn });
 };
 
 /**

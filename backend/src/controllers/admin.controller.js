@@ -9,6 +9,7 @@ import Request from '../models/Request.js';
 import Transfer from '../models/Transfer.js';
 import Medicine from '../models/Medicine.js';
 import CustodyEvent from '../models/CustodyEvent.js';
+import Verification from '../models/Verification.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import verificationService from '../services/verification.service.js';
@@ -19,7 +20,9 @@ import {
   sendOrgRejectedEmail,
   sendUserApprovedEmail,
   sendUserRejectedEmail,
+  sendAccountStatusChangedEmail,
 } from '../services/email.service.js';
+import { sanitizeCsvCell } from '../services/report.service.js';
 import recordAuditLog from '../services/audit.service.js';
 import {
   ORG_STATUS,
@@ -827,11 +830,337 @@ export const verifyAllCustodyChains = asyncHandler(async (_req, res) => {
   );
 });
 
+/**
+ * Helper to mask IP addresses (hide last octet for privacy)
+ */
+const maskIp = (ip) => {
+  if (!ip) return 'N/A';
+  const parts = String(ip).split('.');
+  if (parts.length === 4) {
+    return `${parts[0]}.${parts[1]}.${parts[2]}.xxx`;
+  }
+  return 'xxx.xxx.xxx.xxx';
+};
+
+/**
+ * Get all users across the platform with role-specific metrics.
+ * @route GET /api/admin/users/all
+ */
+export const getAllUsers = asyncHandler(async (req, res) => {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
+  const skip = (page - 1) * limit;
+
+  const { role, accountStatus, search } = req.query;
+
+  const query = {};
+  if (role && role !== 'all') query.role = role;
+  if (accountStatus && accountStatus !== 'all') query.accountStatus = accountStatus;
+
+  if (search) {
+    const searchRegex = new RegExp(search.trim(), 'i');
+    query.$or = [
+      { name: searchRegex },
+      { email: searchRegex },
+      { phone: searchRegex },
+    ];
+  }
+
+  const [users, total, counts] = await Promise.all([
+    User.find(query)
+      .select('name email role accountStatus approvalStatus statusReason createdAt lastLoginAt organizationId')
+      .populate('organizationId', 'name type')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    User.countDocuments(query),
+    Promise.all([
+      User.countDocuments({ role: ROLES.DONOR }),
+      User.countDocuments({ role: ROLES.PHARMACIST }),
+      User.countDocuments({ role: ROLES.NGO }),
+      User.countDocuments({ accountStatus: 'suspended' }),
+      User.countDocuments({ accountStatus: 'blocked' }),
+    ]),
+  ]);
+
+  // Enrich users with role-specific counts
+  const enrichedUsers = await Promise.all(
+    users.map(async (u) => {
+      let donationsCount = 0;
+      let decisionsCount = 0;
+      let orgName = u.organizationId?.name || null;
+
+      if (u.role === ROLES.DONOR) {
+        donationsCount = await Donation.countDocuments({
+          donorId: u._id,
+          status: { $ne: DONATION_STATUS.DRAFT },
+        });
+      } else if (u.role === ROLES.PHARMACIST) {
+        decisionsCount = await Verification.countDocuments({ pharmacistId: u._id });
+      }
+
+      return {
+        ...u,
+        donationsCount,
+        decisionsCount,
+        organizationName: orgName,
+      };
+    })
+  );
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        users: enrichedUsers,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit) || 1,
+        counts: {
+          donors: counts[0],
+          pharmacists: counts[1],
+          ngos: counts[2],
+          suspended: counts[3],
+          blocked: counts[4],
+        },
+      },
+      'All platform users retrieved successfully.'
+    )
+  );
+});
+
+/**
+ * Update user account status (suspend, reactivate, block)
+ * @route PATCH /api/admin/users/:id/status
+ */
+export const updateUserStatus = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const { action, reason } = req.body;
+
+  const targetUser = await User.findById(id);
+  if (!targetUser) {
+    return next(new ApiError(404, 'User account not found.'));
+  }
+
+  // Prevent modifying own status or other admins
+  if (targetUser._id.equals(req.user._id)) {
+    return next(new ApiError(403, 'Administrators cannot modify their own account status.'));
+  }
+
+  if (targetUser.role === ROLES.ADMIN) {
+    return next(new ApiError(403, 'Cannot modify the account status of another administrator.'));
+  }
+
+  let auditAction = null;
+
+  if (action === 'suspend') {
+    targetUser.accountStatus = 'suspended';
+    targetUser.statusReason = reason;
+    targetUser.tokenVersion = (targetUser.tokenVersion || 0) + 1; // Invalidate all active tokens immediately
+    auditAction = AUDIT_ACTIONS.USER_SUSPENDED;
+  } else if (action === 'reactivate') {
+    targetUser.accountStatus = 'active';
+    targetUser.statusReason = null;
+    targetUser.failedLoginAttempts = 0;
+    targetUser.lockUntil = null;
+    auditAction = AUDIT_ACTIONS.USER_REACTIVATED;
+  } else if (action === 'block') {
+    targetUser.accountStatus = 'blocked';
+    targetUser.statusReason = reason;
+    targetUser.tokenVersion = (targetUser.tokenVersion || 0) + 1; // Invalidate all active tokens immediately
+    auditAction = AUDIT_ACTIONS.USER_BLOCKED;
+
+    // Release any active verification claims held by blocked pharmacist
+    if (targetUser.role === ROLES.PHARMACIST) {
+      await Donation.updateMany(
+        {
+          'verificationClaim.pharmacistId': targetUser._id,
+          status: DONATION_STATUS.UNDER_VERIFICATION,
+        },
+        {
+          $set: {
+            status: DONATION_STATUS.SUBMITTED,
+            verificationClaim: null,
+          },
+        }
+      );
+    }
+  }
+
+  await targetUser.save();
+
+  // Send in-app notification & email
+  await Notification.create({
+    userId: targetUser._id,
+    title: `Account ${action.charAt(0).toUpperCase() + action.slice(1)}ed`,
+    message: `Your account has been ${action}ed by an administrator.${reason ? ` Reason: ${reason}` : ''}`,
+    type: 'system',
+  }).catch(() => {});
+
+  if (targetUser.email) {
+    await sendAccountStatusChangedEmail({
+      to: targetUser.email,
+      name: targetUser.name,
+      action,
+      reason,
+    }).catch(() => {});
+  }
+
+  await recordAuditLog({
+    userId: req.user._id,
+    action: auditAction,
+    req,
+    meta: {
+      targetUserId: targetUser._id,
+      targetUserEmail: targetUser.email,
+      targetUserRole: targetUser.role,
+      action,
+      reason,
+    },
+  });
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        user: {
+          _id: targetUser._id,
+          name: targetUser.name,
+          email: targetUser.email,
+          role: targetUser.role,
+          accountStatus: targetUser.accountStatus,
+          statusReason: targetUser.statusReason,
+        },
+      },
+      `User account successfully ${action}ed.`
+    )
+  );
+});
+
+/**
+ * View paginated audit logs with masked IPs
+ * @route GET /api/admin/audit
+ */
+export const getAuditLogs = asyncHandler(async (req, res) => {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+  const skip = (page - 1) * limit;
+
+  const { userId, action, from, to, search } = req.query;
+
+  const query = {};
+  if (userId) query.userId = userId;
+  if (action && action !== 'all') query.action = action;
+
+  if (from || to) {
+    query.createdAt = {};
+    if (from) query.createdAt.$gte = new Date(from);
+    if (to) query.createdAt.$lte = new Date(to);
+  }
+
+  if (search) {
+    const searchRegex = new RegExp(search.trim(), 'i');
+    query.$or = [{ action: searchRegex }, { actorType: searchRegex }];
+  }
+
+  const [logs, total] = await Promise.all([
+    AuditLog.find(query)
+      .populate('userId', 'name email role')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    AuditLog.countDocuments(query),
+  ]);
+
+  const maskedLogs = logs.map((l) => ({
+    ...l,
+    ip: maskIp(l.ip),
+  }));
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        logs: maskedLogs,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+      'Audit logs retrieved successfully.'
+    )
+  );
+});
+
+/**
+ * Export audit logs to safe CSV
+ * @route GET /api/admin/audit/export.csv
+ */
+export const exportAuditLogsCsv = asyncHandler(async (req, res) => {
+  const { userId, action, from, to } = req.query;
+
+  const query = {};
+  if (userId) query.userId = userId;
+  if (action && action !== 'all') query.action = action;
+
+  if (from || to) {
+    query.createdAt = {};
+    if (from) query.createdAt.$gte = new Date(from);
+    if (to) query.createdAt.$lte = new Date(to);
+  }
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="medibridge-audit-logs.csv"');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+
+  res.write('\uFEFF'); // UTF-8 BOM
+  const headers = ['Action', 'Actor Type', 'User Email', 'Timestamp (IST)', 'Masked IP'];
+  res.write(headers.map(sanitizeCsvCell).join(',') + '\n');
+
+  const cursor = AuditLog.find(query)
+    .populate('userId', 'email')
+    .sort({ createdAt: -1 })
+    .limit(5000)
+    .lean()
+    .cursor({ batchSize: 500 });
+
+  let rowCount = 0;
+  for await (const doc of cursor) {
+    rowCount++;
+    const row = [
+      doc.action || '',
+      doc.actorType || '',
+      doc.userId?.email || 'N/A',
+      doc.createdAt ? new Date(doc.createdAt).toISOString() : '',
+      maskIp(doc.ip),
+    ];
+    res.write(row.map(sanitizeCsvCell).join(',') + '\n');
+  }
+
+  res.end();
+
+  await recordAuditLog({
+    userId: req.user._id,
+    action: AUDIT_ACTIONS.ADMIN_AUDIT_EXPORTED,
+    req,
+    meta: {
+      rowCount,
+      query: { action, from, to },
+    },
+  });
+});
+
 export default {
   getOrganizations,
   getOrganizationById,
   reviewOrganization,
   getUsers,
+  getAllUsers,
+  updateUserStatus,
+  getAuditLogs,
+  exportAuditLogsCsv,
   reviewUser,
   getOverview,
   forceReleaseDonation,
@@ -847,3 +1176,4 @@ export default {
   getAdminCustodyTrace,
   verifyAllCustodyChains,
 };
+

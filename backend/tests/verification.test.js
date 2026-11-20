@@ -519,6 +519,7 @@ beforeEach(() => {
 
       jest.spyOn(AuditLog, 'create').mockResolvedValue({});
       jest.spyOn(Notification, 'create').mockResolvedValue({});
+      jest.spyOn(Notification, 'deleteMany').mockResolvedValue({ deletedCount: 0 });
 
       const res = await request(app)
         .post(`/api/verification/items/${medicineId}/decision`)
@@ -596,6 +597,7 @@ beforeEach(() => {
       jest.spyOn(Medicine, 'find').mockResolvedValue([{ status: MEDICINE_STATUS.APPROVED }]);
       jest.spyOn(AuditLog, 'create').mockResolvedValue({});
       jest.spyOn(Notification, 'create').mockResolvedValue({});
+      jest.spyOn(Notification, 'deleteMany').mockResolvedValue({ deletedCount: 0 });
 
       // First decision call
       const res1 = await request(app)
@@ -950,6 +952,7 @@ beforeEach(() => {
       });
       jest.spyOn(AuditLog, 'create').mockResolvedValue({});
       jest.spyOn(Notification, 'create').mockResolvedValue({});
+      jest.spyOn(Notification, 'deleteMany').mockResolvedValue({ deletedCount: 0 });
       jest.spyOn(Claim, 'find').mockImplementation(() => {
         const query = Promise.resolve([]);
         query.populate = jest.fn().mockReturnValue({

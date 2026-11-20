@@ -1,32 +1,54 @@
-import api from './axios.js';
+import api from './axios';
 
 /**
- * Get recent notifications with unread count.
+ * Get paginated notifications for current user with optional unreadOnly filter
  */
-export const getNotifications = async (limit = 20) => {
-  const response = await api.get(`/notifications?limit=${limit}`);
+export const getNotifications = async (params = {}) => {
+  const response = await api.get('/notifications', { params });
   return response.data;
 };
 
 /**
- * Mark a single notification as read.
+ * Mark a single notification as read
  */
-export const markNotificationAsRead = async (id) => {
+export const markAsRead = async (id) => {
   const response = await api.patch(`/notifications/${id}/read`);
   return response.data;
 };
 
 /**
- * Mark all notifications as read.
+ * Mark all notifications as read
  */
-export const markAllNotificationsAsRead = async () => {
+export const markAllAsRead = async () => {
   const response = await api.patch('/notifications/read-all');
   return response.data;
 };
 
-export default {
-  getNotifications,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
+/**
+ * Delete a single notification
+ */
+export const deleteNotification = async (id) => {
+  const response = await api.delete(`/notifications/${id}`);
+  return response.data;
 };
 
+/**
+ * Clear all read notifications
+ */
+export const clearReadNotifications = async () => {
+  const response = await api.delete('/notifications');
+  return response.data;
+};
+
+export const markNotificationAsRead = markAsRead;
+export const markAllNotificationsAsRead = markAllAsRead;
+
+export default {
+  getNotifications,
+  markAsRead,
+  markAllAsRead,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  clearReadNotifications,
+};

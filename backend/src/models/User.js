@@ -60,6 +60,15 @@ const userSchema = new mongoose.Schema(
       default: ACCOUNT_STATUS.ACTIVE,
       index: true,
     },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
+    statusReason: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     approvalStatus: {
       type: String,
       enum: APPROVAL_STATUS_ARRAY,

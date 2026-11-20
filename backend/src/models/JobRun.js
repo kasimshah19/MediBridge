@@ -50,6 +50,7 @@ const jobRunSchema = new mongoose.Schema(
       priorityChanged: { type: Number, default: 0 },
       newlyExpired: { type: Number, default: 0 },
       notificationsCreated: { type: Number, default: 0 },
+      notificationsPurged: { type: Number, default: 0 },
       donationsAffected: { type: Number, default: 0 },
     },
     error: {

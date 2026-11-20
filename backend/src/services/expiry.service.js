@@ -227,6 +227,7 @@ export const runExpiryCheck = async ({
       priorityChanged: 0,
       newlyExpired: 0,
       notificationsCreated: 0,
+      notificationsPurged: 0,
       donationsAffected: 0,
     },
   });
@@ -236,6 +237,7 @@ export const runExpiryCheck = async ({
     let priorityChanged = 0;
     let newlyExpired = 0;
     let notificationsCreated = 0;
+    let notificationsPurged = 0;
     let donationsAffected = 0;
 
     const sampleChanges = [];
@@ -770,6 +772,19 @@ export const runExpiryCheck = async ({
           notificationsCreated++;
         }
       }
+
+      // 7. Phase 8 Retention: Purge read notifications older than NOTIFICATION_RETENTION_DAYS (never unread)
+      const retentionDays = env.NOTIFICATION_RETENTION_DAYS || 90;
+      const purgeCutoff = new Date(executionAsOf.getTime() - retentionDays * 24 * 60 * 60 * 1000);
+      try {
+        const purgeResult = await Notification.deleteMany({
+          isRead: true,
+          createdAt: { $lt: purgeCutoff },
+        });
+        notificationsPurged = purgeResult?.deletedCount || 0;
+      } catch (purgeErr) {
+        notificationsPurged = 0;
+      }
     }
 
     const durationMs = Date.now() - startedAt.getTime();
@@ -778,6 +793,7 @@ export const runExpiryCheck = async ({
       priorityChanged,
       newlyExpired,
       notificationsCreated,
+      notificationsPurged,
       donationsAffected,
     };
 

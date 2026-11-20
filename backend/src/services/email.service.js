@@ -407,6 +407,70 @@ export const sendVerificationMoreInfoEmail = async ({
   });
 };
 
+/**
+ * Send account status change notification (suspend, reactivate, block)
+ */
+export const sendAccountStatusChangedEmail = async ({ to, name, action, reason }) => {
+  const isSuspended = action === 'suspend';
+  const isBlocked = action === 'block';
+  const isReactivated = action === 'reactivate';
+
+  let title = 'Account Status Updated';
+  let badgeColor = '#0D9488';
+  let message = 'Your account status has been updated.';
+
+  if (isSuspended) {
+    title = 'Account Suspended';
+    badgeColor = '#F59E0B';
+    message = `Your MediBridge account has been temporarily suspended by an administrator.${reason ? ` Reason: ${reason}` : ''}`;
+  } else if (isBlocked) {
+    title = 'Account Access Terminated';
+    badgeColor = '#EF4444';
+    message = `Your MediBridge account has been permanently blocked.${reason ? ` Reason: ${reason}` : ''}`;
+  } else if (isReactivated) {
+    title = 'Account Reactivated';
+    badgeColor = '#10B981';
+    message = 'Your MediBridge account has been reactivated. You may now sign in and resume full platform activities.';
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px; color: #1E293B; }
+          .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #E2E8F0; padding: 32px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
+          .logo { font-size: 22px; font-weight: bold; color: #0284C7; margin-bottom: 24px; display: inline-block; }
+          .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; color: #ffffff; background-color: ${badgeColor}; margin-bottom: 16px; }
+          h2 { color: #0F172A; margin-top: 0; font-size: 20px; }
+          p { font-size: 14px; line-height: 1.6; color: #475569; margin: 16px 0; }
+          .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #F1F5F9; font-size: 12px; color: #94A3B8; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="logo">🏥 MediBridge</div>
+          <div><span class="badge">${title}</span></div>
+          <h2>Hello ${name || 'User'},</h2>
+          <p>${message}</p>
+          <p>If you believe this is in error or have questions, please reply directly to this notification or reach out to support.</p>
+          <div class="footer">
+            <p>MediBridge Healthcare Platform • Regulated Medicine Exchange Network</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendMailSafe({
+    to,
+    subject: `MediBridge - ${title}`,
+    html,
+    devLogSummary: `ℹ️ Status changed to: ${action} for ${to}`,
+  });
+};
+
 export default {
   sendPasswordResetEmail,
   sendOrgVerifiedEmail,
@@ -416,4 +480,5 @@ export default {
   sendExpiryAlertEmail,
   sendVerificationDecisionEmail,
   sendVerificationMoreInfoEmail,
+  sendAccountStatusChangedEmail,
 };

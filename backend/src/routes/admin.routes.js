@@ -4,6 +4,10 @@ import {
   getOrganizationById,
   reviewOrganization,
   getUsers,
+  getAllUsers,
+  updateUserStatus,
+  getAuditLogs,
+  exportAuditLogsCsv,
   reviewUser,
   getOverview,
   forceReleaseDonation,
@@ -22,7 +26,11 @@ import {
 import { protect } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
-import { reviewOrgSchema, reviewUserSchema } from '../validators/admin.validator.js';
+import {
+  reviewOrgSchema,
+  reviewUserSchema,
+  updateUserStatusSchema,
+} from '../validators/admin.validator.js';
 import { runJobSchema } from '../validators/expiry.validator.js';
 import { claimCancelSchema } from '../validators/matching.validator.js';
 import { getAdminJobRuns, runAdminExpiryCheck } from '../controllers/expiry.controller.js';
@@ -42,8 +50,14 @@ router.get('/organizations/:id', getOrganizationById);
 router.patch('/organizations/:id/review', validate(reviewOrgSchema), reviewOrganization);
 
 // User / Pharmacist management
+router.get('/users/all', getAllUsers);
+router.patch('/users/:id/status', validate(updateUserStatusSchema), updateUserStatus);
 router.get('/users', getUsers);
 router.patch('/users/:id/review', validate(reviewUserSchema), reviewUser);
+
+// Audit log viewer and export
+router.get('/audit/export.csv', exportAuditLogsCsv);
+router.get('/audit', getAuditLogs);
 
 // Expiry scheduled job management
 router.get('/jobs/expiry', getAdminJobRuns);
