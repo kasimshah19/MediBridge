@@ -82,6 +82,7 @@ export const changePassword = asyncHandler(async (req, res, next) => {
   // Update password with 12 rounds bcrypt hash
   user.passwordHash = await bcrypt.hash(newPassword, 12);
   user.passwordChangedAt = new Date();
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
 
   await recordAuditLog({

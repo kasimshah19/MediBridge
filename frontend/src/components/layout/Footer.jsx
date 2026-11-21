@@ -26,6 +26,7 @@ export default function Footer() {
               <li><Link to="/#how-it-works" className="hover:text-teal-600 transition-colors">How It Works</Link></li>
               <li><Link to="/verify" className="hover:text-teal-600 transition-colors">Verify Medicine (QR)</Link></li>
               <li><Link to="/for-ngos" className="hover:text-teal-600 transition-colors">For NGOs & Clinics</Link></li>
+              <li><a href="/api/health" target="_blank" rel="noopener noreferrer" className="hover:text-teal-600 transition-colors flex items-center gap-1"><span>System Status</span> <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">Online</span></a></li>
               <li><Link to="/about" className="hover:text-teal-600 transition-colors">About Our Mission</Link></li>
               <li><Link to="/register" className="hover:text-teal-600 transition-colors">Join as Donor / Partner</Link></li>
             </ul>

@@ -308,6 +308,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
   user.passwordResetToken = undefined;
   user.passwordResetExpires = undefined;
   user.passwordChangedAt = new Date();
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   user.failedLoginAttempts = 0;
   user.lockUntil = null;
   await user.save();

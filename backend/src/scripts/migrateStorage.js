@@ -15,7 +15,8 @@ const UPLOADS_MEDICINE_BASE_DIR = path.resolve('uploads', 'medicine-photos');
  * Migrate all local files into GridFS with SHA-256 verification and audit logging.
  */
 async function migrateStorage() {
-  console.log('🚀 Starting Storage Migration: Local Disk -> GridFS...');
+  const deleteLocal = process.argv.includes('--delete-local');
+  console.log(`🚀 Starting Storage Migration: Local Disk -> GridFS... ${deleteLocal ? '(--delete-local enabled)' : '(preserving local files)'}`);
   await connectDB();
 
   const bucket = getGridFSBucket();
@@ -59,6 +60,11 @@ async function migrateStorage() {
         migratedCount++;
         totalBytes += buffer.length;
         console.log(`  ✓ Migrated org doc: ${orgId}/${filename}`);
+
+        if (deleteLocal) {
+          await fs.promises.unlink(filePath).catch(() => {});
+          console.log(`    ↳ Deleted local org doc: ${filePath}`);
+        }
       }
     }
   }
@@ -108,6 +114,11 @@ async function migrateStorage() {
           migratedCount++;
           totalBytes += buffer.length;
           console.log(`  ✓ Migrated photo: ${donationId}/${itemId}/${filename}`);
+
+          if (deleteLocal) {
+            await fs.promises.unlink(filePath).catch(() => {});
+            console.log(`    ↳ Deleted local photo: ${filePath}`);
+          }
         }
       }
     }

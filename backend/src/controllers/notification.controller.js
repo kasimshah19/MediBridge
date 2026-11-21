@@ -11,11 +11,19 @@ export const getNotifications = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
   const skip = (page - 1) * limit;
-  const unreadOnly = req.query.unreadOnly === 'true';
 
   const query = { userId: req.user._id };
-  if (unreadOnly) {
+
+  // Support unread=true|false as well as unreadOnly=true
+  if (req.query.unread === 'true' || req.query.unreadOnly === 'true') {
     query.isRead = false;
+  } else if (req.query.unread === 'false') {
+    query.isRead = true;
+  }
+
+  // Support filtering by notification type
+  if (req.query.type) {
+    query.type = req.query.type;
   }
 
   const [notifications, total, unreadCount] = await Promise.all([
