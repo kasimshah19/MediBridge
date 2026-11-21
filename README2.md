@@ -971,6 +971,19 @@ Free serverless instances on Render spin down after 15 minutes of inactivity. Me
 
 ---
 
+## 👨‍💻 Project Development Team & Core Responsibilities
+
+MediBridge is conceptualized, engineered, and maintained by a dedicated 4-member cross-functional engineering team:
+
+| Team Member | Engineering Role | Core Responsibilities & Key Contributions |
+| :--- | :--- | :--- |
+| **Kasim Shah** | **Lead Backend & Database Architect** | • **Full Backend RESTful API Architecture** (Node.js & Express.js 4.21)<br />• **Database Modeling & Aggregation Pipelines** (MongoDB Atlas + Mongoose 8)<br />• **Cryptographic Chain of Custody Engine** (SHA-256 hash chaining & HMAC-SHA256 QR passports)<br />• **Dual-Driver Storage System** (Local filesystem & Cloud MongoDB GridFS `medibridge_files`)<br />• **Security Hardening & Session Revocation** (`tokenVersion`, rate limiting, Helmet CSP, origin check)<br />• **Automated Expiry & Retention Engine** (Cron scheduling & notification retention cleanup)<br />• **Cloud Server Deployment** (Render infrastructure blueprint & live API hosting) |
+| **Sohel Shaikh** | **Lead Frontend Software Engineer** | • **Single Page Application (SPA) Engineering** (React 18.3 & Vite 6.4)<br />• **Global State & Session Management** (AuthContext, token refresh, and role-based guards)<br />• **Modular API Integration Layer** (Axios interceptors, retry handlers, and payload formatting)<br />• **High-Reliability Fallback Systems** (`ServerWakingBanner` cold-start retrier & `OfflineBanner`)<br />• **Interactive Business Intelligence Dashboards** (Recharts timeseries, funnels, and KPI cards)<br />• **Hardware & Geo Integrations** (`html5-qrcode` mobile camera scanner & Leaflet mapping)<br />• **Frontend Edge Deployment** (Vercel Global CDN deployment & proxy rewrites) |
+| **Ammar Shaikh** | **Lead UI / UX Designer & Product Stylist** | • **Healthcare Design System Architecture** (Tailwind CSS v4 token ecosystem)<br />• **Visual Identity & Color Palette** (Teal `#0D9488`, Sky `#0EA5E9`, Mint, Amber, Rose accents)<br />• **Responsive Layout Engineering** (Mobile-first design from 360px smartphones to 4K displays)<br />• **Micro-Interactions & Fluid Animations** (Framer Motion drawers, modals, toasts, and step transitions)<br />• **Bento Grid Dashboard Layouts** (Executive stats, priority queues, and transfer manifests)<br />• **Accessibility & Reduced-Motion Design** (WCAG contrast conformance and keyboard navigation)<br />• **Vector Document Layouts** (High-resolution printable A4 labels & handover receipts styling) |
+| **Faizan Khatib**| **Lead QA, Testing & Technical Documentation** | • **Comprehensive Test Suite Development** (17 Jest integration suites across 169 unit tests)<br />• **End-to-End Automation Framework** (Playwright cross-browser regression test suites)<br />• **Repository Security Hygiene Auditing** (`security:check` script & git leak detection)<br />• **Cryptographic Ledger Integrity Auditing** (`custody:verify` mathematical audit script)<br />• **Technical System Documentation** (`docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `DEPLOY.md`)<br />• **Evaluator Demonstration Script** (`docs/DEMO.md` walkthrough for 4 user personas)<br />• **Continuous Integration (CI) Pipeline** (GitHub Actions workflow maintenance & release gates) |
+
+---
+
 ## 📄 License
 
 Distributed under the **MIT License**. See `LICENSE` for details.
