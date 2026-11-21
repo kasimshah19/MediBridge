@@ -1,5 +1,4 @@
 {
-  "_comment": "Proxying /api/* to Render ensures API requests are first-party to avoid third-party cookie blocking in modern browsers (Chrome, Safari ITP).",
   "headers": [
     {
       "source": "/assets/(.*)",
