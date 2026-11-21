@@ -1,7 +1,45 @@
-MIT License
+================================================================================
+                    MEDIBRIDGE SOFTWARE LICENSE & PERMISSIONS
+================================================================================
 
-Copyright (c) 2026 Kasim Shah, Sohel Shaikh, Ammar Shaikh, Faizan Khatib
+Project: MediBridge Platform
+Repository: https://github.com/kasimshah19/MediBridge
+Year: 2026
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software.
+--------------------------------------------------------------------------------
+1. AUTHORS & CORE CONTRIBUTORS
+--------------------------------------------------------------------------------
+- Kasim Shah: Lead Backend & Database Architect
+- Sohel Shaikh: Lead Frontend Software Engineer
+- Ammar Shaikh: Lead UI / UX Designer & Product Stylist
+- Faizan Khatib: Lead QA Engineer & Technical Documentation
 
-THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+--------------------------------------------------------------------------------
+2. TERMS OF USE & GRANT
+--------------------------------------------------------------------------------
+Permission is granted to any person obtaining a copy of this software and
+associated documentation files to use, study, copy, modify, merge, publish,
+distribute, sublicense, and/or deploy the software for educational, non-profit,
+research, and personal development purposes.
+
+--------------------------------------------------------------------------------
+3. HEALTHCARE & STATUTORY REGULATORY DISCLAIMER
+--------------------------------------------------------------------------------
+MediBridge is an educational and technological demonstration platform.
+The software is not a certified medical device and does not substitute for
+professional medical, legal, or pharmaceutical counsel.
+
+Redistribution of pharmaceutical items must comply with relevant statutes,
+including the Drugs and Cosmetics Act, 1940, and local health authority mandates.
+The authors accept no liability for any adverse health events, improper storage,
+or regulatory non-compliance arising from the deployment of this codebase.
+
+--------------------------------------------------------------------------------
+4. WARRANTY DISCLAIMER
+--------------------------------------------------------------------------------
+THE SOFTWARE IS PROVIDED WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE
+LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF OR
+INABILITY TO USE THIS SOFTWARE.
+================================================================================
