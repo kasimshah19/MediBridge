@@ -971,16 +971,168 @@ Free serverless instances on Render spin down after 15 minutes of inactivity. Me
 
 ---
 
-## 👨‍💻 Project Development Team & Core Responsibilities
+## 👨‍💻 Project Development Team & Detailed Engineering Contributions
 
-MediBridge is conceptualized, engineered, and maintained by a dedicated 4-member cross-functional engineering team:
+MediBridge was engineered and brought to production by a collaborative, cross-functional 4-member engineering team. Each member had complete technical ownership over specific pillars of the architecture:
 
-| Team Member | Engineering Role | Core Responsibilities & Key Contributions |
-| :--- | :--- | :--- |
-| **Kasim Shah** | **Lead Backend & Database Architect** | • **Full Backend RESTful API Architecture** (Node.js & Express.js 4.21)<br />• **Database Modeling & Aggregation Pipelines** (MongoDB Atlas + Mongoose 8)<br />• **Cryptographic Chain of Custody Engine** (SHA-256 hash chaining & HMAC-SHA256 QR passports)<br />• **Dual-Driver Storage System** (Local filesystem & Cloud MongoDB GridFS `medibridge_files`)<br />• **Security Hardening & Session Revocation** (`tokenVersion`, rate limiting, Helmet CSP, origin check)<br />• **Automated Expiry & Retention Engine** (Cron scheduling & notification retention cleanup)<br />• **Cloud Server Deployment** (Render infrastructure blueprint & live API hosting) |
-| **Sohel Shaikh** | **Lead Frontend Software Engineer** | • **Single Page Application (SPA) Engineering** (React 18.3 & Vite 6.4)<br />• **Global State & Session Management** (AuthContext, token refresh, and role-based guards)<br />• **Modular API Integration Layer** (Axios interceptors, retry handlers, and payload formatting)<br />• **High-Reliability Fallback Systems** (`ServerWakingBanner` cold-start retrier & `OfflineBanner`)<br />• **Interactive Business Intelligence Dashboards** (Recharts timeseries, funnels, and KPI cards)<br />• **Hardware & Geo Integrations** (`html5-qrcode` mobile camera scanner & Leaflet mapping)<br />• **Frontend Edge Deployment** (Vercel Global CDN deployment & proxy rewrites) |
-| **Ammar Shaikh** | **Lead UI / UX Designer & Product Stylist** | • **Healthcare Design System Architecture** (Tailwind CSS v4 token ecosystem)<br />• **Visual Identity & Color Palette** (Teal `#0D9488`, Sky `#0EA5E9`, Mint, Amber, Rose accents)<br />• **Responsive Layout Engineering** (Mobile-first design from 360px smartphones to 4K displays)<br />• **Micro-Interactions & Fluid Animations** (Framer Motion drawers, modals, toasts, and step transitions)<br />• **Bento Grid Dashboard Layouts** (Executive stats, priority queues, and transfer manifests)<br />• **Accessibility & Reduced-Motion Design** (WCAG contrast conformance and keyboard navigation)<br />• **Vector Document Layouts** (High-resolution printable A4 labels & handover receipts styling) |
-| **Faizan Khatib**| **Lead QA, Testing & Technical Documentation** | • **Comprehensive Test Suite Development** (17 Jest integration suites across 169 unit tests)<br />• **End-to-End Automation Framework** (Playwright cross-browser regression test suites)<br />• **Repository Security Hygiene Auditing** (`security:check` script & git leak detection)<br />• **Cryptographic Ledger Integrity Auditing** (`custody:verify` mathematical audit script)<br />• **Technical System Documentation** (`docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `DEPLOY.md`)<br />• **Evaluator Demonstration Script** (`docs/DEMO.md` walkthrough for 4 user personas)<br />• **Continuous Integration (CI) Pipeline** (GitHub Actions workflow maintenance & release gates) |
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 MEDIBRIDGE ENGINEERING DIVISION                                  │
+├───────────────────────┬───────────────────────┬───────────────────────┬──────────────────────────┤
+│      KASIM SHAH       │      SOHEL SHAIKH     │      AMMAR SHAIKH     │      FAIZAN KHATIB       │
+│ Lead Backend Architect│ Lead Frontend Engineer│ Lead UI / UX Designer │  Lead QA & Documentation │
+│  & Database Engineer  │  & Client Architect   │   & Product Stylist   │     & Security Audit     │
+├───────────────────────┼───────────────────────┼───────────────────────┼──────────────────────────┤
+│ • Express API Engine  │ • React 18 SPA & Vite │ • Tailwind CSS v4     │ • 17 Jest Suites (169 T) │
+│ • MongoDB Atlas & ODM │ • Recharts BI Dash    │ • Healthcare Palette  │ • Playwright E2E Suite   │
+│ • SHA-256 Custody Led │ • Leaflet Geo Maps    │ • Glassmorphism UI    │ • CI/CD Actions Pipeline │
+│ • HMAC-SHA256 QR Auth │ • html5-qrcode Scanner│ • Framer Motion Micro │ • Crypto Ledger Verifier │
+│ • GridFS Cloud Storage│ • Cold-Start Retrier  │ • Responsive 360px-4K │ • Technical Whitepapers  │
+│ • tokenVersion Kill   │ • AuthContext & State │ • Printable PDF Design│ • Threat Model Specs     │
+└───────────────────────┴───────────────────────┴───────────────────────┴──────────────────────────┘
+```
+
+---
+
+### 1. 🛠️ Kasim Shah — Lead Backend Architect & Database Engineer
+**Core Responsibility:** Complete architecture, implementation, security hardening, and deployment of the backend RESTful microservices, database persistence layer, and cryptographic engines.
+
+#### Key Architectural Systems Owned:
+- **Full RESTful Application Programming Interface (API):**
+  - Architected the scalable Node.js (v20+ LTS) and Express.js (v4.21) application server.
+  - Implemented centralized asynchronous error handling (`asyncHandler`), uniform JSON response encapsulation (`ApiResponse`), and standardized HTTP error hierarchies (`ApiError`).
+  - Configured graceful server shutdown on `SIGTERM`/`SIGINT`, ensuring in-flight database write completions and clean socket closures.
+- **Database Modeling & Aggregation Pipelines (MongoDB Atlas):**
+  - Designed all 11 Mongoose document schemas (`User`, `Organization`, `Donation`, `Medicine`, `Verification`, `Requirement`, `Claim`, `Transfer`, `CustodyEvent`, `AuditLog`, `JobRun`).
+  - Configured high-performance geospatial spherical indexes (`2dsphere`), compound lookup indexes, and TTL expiration indexes.
+  - Authored complex aggregation pipelines for hyper-local matching (`$geoNear`) and executive analytics with IST date truncations (`$dateTrunc` in `Asia/Kolkata`).
+- **Cryptographic Chain of Custody & Hash Linking Engine:**
+  - Designed the append-only mathematical hash-chaining formula:
+    $$H_n = \text{SHA-256}\Big(H_{n-1} \mathbin{\Vert} \text{"|"} \mathbin{\Vert} \text{canonicalJSON}(\text{payload})\Big)$$
+  - Built the recursive lexicographical key-sorting serializer (`canonicalJSON`) to guarantee deterministic hash parity across platforms.
+  - Enforced database-level runtime immutability via Mongoose pre-hooks (`pre('save')`, `pre('updateOne')`, `pre('deleteOne')`) that throw fatal exceptions on historical tampering attempts.
+- **Digital Passport & Cryptographic Authentication:**
+  - Implemented HMAC-SHA256 digital passport signing for pharmacist-verified medicines.
+  - Built the public verification endpoint using constant-time cryptographic buffer comparison (`crypto.timingSafeEqual`) to prevent timing side-channel attacks.
+- **Stateful Token Revocation (`tokenVersion`):**
+  - Eliminated the classic zombie JWT vulnerability by introducing `tokenVersion` on the User document and JWT payload.
+  - Configured atomic increments on account suspension, blocking, or password resets, instantly revoking active sessions across all devices.
+- **Dual-Driver Storage Architecture (`storage.service.js`):**
+  - Built the abstraction layer supporting seamless switching between local disk storage and cloud MongoDB GridFS (`medibridge_files`).
+  - Integrated the non-bypassable Sharp image processing pipeline (auto-orientation, permanent EXIF GPS metadata stripping, 1600px dimension clamping, JPEG q80 re-compression).
+  - Authored the zero-downtime storage migration CLI (`npm run storage:migrate -- --delete-local`) and orphan cleaner (`npm run storage:orphans`).
+- **Security Hardening & Production Cloud Deployment:**
+  - Implemented Helmet CSP/HSTS, HPP parameter pollution protection, NoSQL query injection filtering (`express-mongo-sanitize`), and centralized rate limiters.
+  - Configured CSRF origin check middleware verifying incoming `Origin` and `Referer` headers against `CLIENT_URL`.
+  - Authored the Render Blueprint (`render.yaml`) and deployed the live backend web service to Render's Singapore region.
+
+---
+
+### 2. 💻 Sohel Shaikh — Lead Frontend Software Engineer
+**Core Responsibility:** Architecture, client-side state management, hardware integrations, business intelligence visualizations, and production edge deployment of the React Single Page Application (SPA).
+
+#### Key Client Systems Owned:
+- **React 18 Single Page Application Architecture (Vite 6):**
+  - Scaffolded the frontend project with React 18.3, Vite 6.4, and modern ES module chunk splitting.
+  - Configured declarative client routing using React Router v6 with strict route guards (`ProtectedRoute`, `RoleBasedRoute`).
+  - Implemented code-splitting via `React.lazy()` and `Suspense` skeletons for performance-heavy pages (Analytics, Maps, Scanner).
+- **Global State Management & Authentication Lifecycle:**
+  - Engineered the centralized `AuthContext` managing user authentication, login persistence, active roles, and silent token validation.
+  - Built the Axios client instance with request and response interceptors, handling automatic credential forwarding and standard error parsing.
+- **Cold-Start Resilience & High-Availability Fallbacks:**
+  - Engineered the cold-start detection interceptor catching 502/503/504 gateway timeouts and slow boot requests (> 8s) from Render's free tier.
+  - Built the interactive `ServerWakingBanner` modal that informs users that serverless hosting is waking up, executing an automated polling retry loop every 4 seconds.
+  - Implemented the real-time `OfflineBanner` detecting network disconnects via `navigator.onLine` event listeners.
+- **Executive Business Intelligence Dashboards (`/admin/analytics`):**
+  - Integrated Recharts 2.15 to construct interactive, responsive analytical charts:
+    - *Activity Trends:* Dual-area curve showing donation and handover volume over time.
+    - *Verification Breakdown:* Stacked bar chart comparing Approvals, Rejections, and Clarifications.
+    - *Conversion Funnel:* Step-by-step drop-off visualizer from submission to physical transfer.
+    - *Root-Cause Analysis:* Horizontal bar charts categorizing screening and pharmacist rejection codes.
+    - *Expiry Risk Forecast:* Priority donut chart and 12-month forward-looking inventory expiry projections.
+  - Implemented sticky date range filters (7d, 30d, 90d, YTD, Custom) with URL search parameter bi-directional synchronization.
+- **Hardware Scanner & Geospatial Map Integration:**
+  - Integrated `html5-qrcode` to enable real-time camera scanning on mobile smartphones and desktop webcams for QR passport verification.
+  - Built interactive Leaflet mapping canvases with custom SVG pin markers, 2dsphere radius circles, and OpenStreetMap tile layers.
+- **Dynamic Handover Pass Protocol UI:**
+  - Implemented the dynamic 15-minute rolling handover OTP countdown timer with visual expiration warnings.
+  - Built the NGO handover reception screen featuring the 4-point physical criteria checklist and instant receipt download handlers.
+- **Production Edge Deployment (Vercel):**
+  - Configured `frontend/vercel.json` with reverse proxy rewrites routing `/api/*` to Render, ensuring first-party cookie compliance.
+  - Deployed the production application to Vercel's Global Edge CDN network.
+
+---
+
+### 3. 🎨 Ammar Shaikh — Lead UI / UX Designer & Product Stylist
+**Core Responsibility:** Design token ecosystem, visual identity, accessibility compliance (WCAG 2.1 AA), motion design, responsive layout engineering, and vector document styling.
+
+#### Key Design Systems Owned:
+- **Tailwind CSS v4 Healthcare Token Ecosystem:**
+  - Conceptualized and implemented the bespoke MediBridge design token palette:
+    - *Clinical Teal (`#0D9488`):* Represents medical authority, trust, and cleanliness.
+    - *Modern Sky (`#0EA5E9`):* Represents digital innovation and fluidity.
+    - *Emerald (`#10B981`):* Used exclusively for verified badges, successful handovers, and positive trends.
+    - *Amber (`#F59E0B`):* Used for urgent triage alerts and pending pharmacist claims.
+    - *Rose (`#F43F5E`):* Used for critical expiry warnings, rejections, and blocked accounts.
+- **Glassmorphism & Surface Design:**
+  - Crafted light, airy, patient-friendly interfaces using frosted glass navigation bars (`backdrop-blur-md bg-white/70`), soft teal-tinted ambient box-shadows, and double-radius borders (`rounded-2xl` and `rounded-3xl`).
+  - Completely eliminated stark dark sections in favor of high-contrast, accessible clinical surfaces.
+- **Micro-Interactions & Framer Motion Transitions:**
+  - Implemented fluid micro-interactions using Framer Motion 12:
+    - Page transition slides and smooth fades between dashboard tabs.
+    - Smooth slide-over inspection drawers for user details and audit event payloads.
+    - Animated counter numbers (`useCountUp`) on executive KPI cards.
+    - Gentle pulsing animations on active handover passes and verification badges.
+- **Bento Grid Dashboard Architecture:**
+  - Designed ergonomic bento-grid layouts across all 4 role portals (Donor, Pharmacist, NGO, Administrator), ensuring critical action buttons are visible above the fold.
+  - Created standardized `StatCard`, `EmptyState`, and `ConfirmDialog` components ensuring uniform visual harmony across the entire app.
+- **Mobile-First Responsive Engineering (360px to 4K):**
+  - Rigorously tested and optimized every screen across viewport sizes from 360px Android smartphones up to 4K ultra-wide monitors.
+  - Conformed strictly to WCAG 2.1 AA contrast requirements and touch target dimensions (minimum 44x44px for touchable icons).
+  - Integrated `prefers-reduced-motion` CSS rules to respect users with vestibular sensitivities.
+- **Vector Document Typography & Print Formatting:**
+  - Designed the visual layout for high-density printable vector A4 2x4 medicine label sticker sheets.
+  - Styled official redistribution handover receipts in PDFKit with clean tabular borders, corporate branding, and regulatory compliance disclosures.
+
+---
+
+### 4. 🧪 Faizan Khatib — Lead QA Engineer, Testing & Technical Documentation
+**Core Responsibility:** Integration test suites, Playwright end-to-end automation, security hygiene audits, mathematical ledger verification scripts, CI/CD pipeline automation, and technical whitepapers.
+
+#### Key Quality & Documentation Systems Owned:
+- **Comprehensive Backend Integration Test Suite (Jest & Supertest):**
+  - Authored and maintained **17 integration test suites covering 169 unit and integration tests** achieving a **100% pass rate**:
+    - `auth.test.js` — Registration, login lockouts, password resets, and session tokens.
+    - `organization.test.js` — NGO and pharmacy onboarding and admin approvals.
+    - `donation.test.js` — Multi-item donation submissions and draft lifecycles.
+    - `screening.test.js` — Automated 30-day expiry floors and banned drug blacklists.
+    - `verification.test.js` & `verificationRules.test.js` — Atomic 60-min claim locks, 6-point checklist, and more-info loops.
+    - `matching.test.js` & `geo.test.js` — Geospatial spherical `$geoNear` radius matching.
+    - `claims.test.js` — 48-hour reservation holds and claim expiration.
+    - `handover.test.js` — 15-minute rolling OTP pass codes and physical reception checklists.
+    - `custody.test.js` — SHA-256 hash chaining mathematics and mutation rejection hooks.
+    - `qr.test.js` — HMAC-SHA256 digital passport signing and constant-time validation.
+    - `analytics.test.js` — Aggregation pipelines, zero-filled series, and variance math.
+    - `reports.test.js` — Vector PDFKit platform summaries and formula-neutralized CSV exports.
+    - `security.test.js` — Helmet headers, CSRF origin checks, rate limiters, and NoSQL sanitizers.
+    - `health.test.js` — Uptime and database readiness probes (`/api/health/ready`).
+- **Playwright End-to-End (E2E) Automation Framework:**
+  - Engineered the automated Playwright test suite located in `e2e/specs/`:
+    - `happy-path.spec.js` — Full lifecycle test from donor submission to pharmacist verification, NGO match, physical handover, and PDF receipt download.
+    - `rbac.spec.js` — Role-based access control route protection and unauthorized redirects.
+    - `validation.spec.js` — Client and server-side Zod form validation and 5-attempt login lockouts.
+    - `security.spec.js` — Foreign Origin header blocking and instant token revocation upon suspension.
+    - `responsive.spec.js` — Mobile viewport layout integrity at 360px width.
+- **Repository Security & Secret Hygiene Audits:**
+  - Developed the automated `npm run security:check` script (`backend/src/scripts/securityCheck.js`) verifying via `git ls-files` that zero `.env` files, uploads, or private keys are tracked in git.
+  - Authored the cryptographic ledger audit tool (`npm run custody:verify`) that recalculates the SHA-256 hash chains of every medicine in the database to detect data corruption.
+- **Technical Whitepapers & System Documentation:**
+  - Authored the comprehensive **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** with detailed Mermaid architecture diagrams and state machine specifications.
+  - Authored the exhaustive **[`docs/SECURITY.md`](docs/SECURITY.md)** covering threat modeling, cryptographic formulas, and PII protection policies.
+  - Authored the step-by-step **[`DEPLOY.md`](DEPLOY.md)** deployment runbook for Atlas, Render, and Vercel.
+  - Authored the **[`docs/DEMO.md`](docs/DEMO.md)** evaluator demonstration script guiding reviewers through all 4 user personas.
+- **Continuous Integration (CI/CD) Pipeline:**
+  - Authored and maintained the GitHub Actions workflow (`.github/workflows/ci.yml`) automating backend test runs, security checks, and frontend production builds on every push and pull request.
 
 ---
 
