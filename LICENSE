@@ -2,44 +2,98 @@
                     MEDIBRIDGE SOFTWARE LICENSE & PERMISSIONS
 ================================================================================
 
-Project: MediBridge Platform
+Project: MediBridge Healthcare Platform
 Repository: https://github.com/kasimshah19/MediBridge
 Year: 2026
 
 --------------------------------------------------------------------------------
-1. AUTHORS & CORE CONTRIBUTORS
+1. AUTHORS & CORE ENGINEERING CONTRIBUTORS
 --------------------------------------------------------------------------------
-- Kasim Shah: Lead Backend & Database Architect
-- Sohel Shaikh: Lead Frontend Software Engineer
-- Ammar Shaikh: Lead UI / UX Designer & Product Stylist
-- Faizan Khatib: Lead QA Engineer & Technical Documentation
+This project is authored, engineered, and maintained by:
+
+- Kasim Shah
+  Role: Lead Backend Architect & Database Engineer
+  Responsibilities: Node.js/Express REST APIs, MongoDB Atlas database design,
+  cryptographic SHA-256 chain of custody, HMAC-SHA256 QR passports, dual-driver
+  GridFS storage, and security hardening.
+
+- Sohel Shaikh
+  Role: Lead Frontend Software Engineer & Client Architect
+  Responsibilities: React 18 SPA, Vite architecture, Recharts analytics, Leaflet
+  geospatial mapping, html5-qrcode camera integration, and Vercel edge deployment.
+
+- Ammar Shaikh
+  Role: Lead UI / UX Designer & Product Stylist
+  Responsibilities: Tailwind CSS v4 design token ecosystem, accessible healthcare
+  visual identity, Framer Motion animations, bento-grid layouts, and vector PDF design.
+
+- Faizan Khatib
+  Role: Lead QA Engineer & Technical Documentation Specialist
+  Responsibilities: 17 Jest integration test suites (169 tests), Playwright E2E
+  automation, security hygiene audit tools, system whitepapers, and CI/CD pipelines.
 
 --------------------------------------------------------------------------------
-2. TERMS OF USE & GRANT
+2. GRANT OF PERMISSION & OPEN-SOURCE RIGHTS
 --------------------------------------------------------------------------------
-Permission is granted to any person obtaining a copy of this software and
-associated documentation files to use, study, copy, modify, merge, publish,
-distribute, sublicense, and/or deploy the software for educational, non-profit,
-research, and personal development purposes.
+Permission is hereby granted, free of charge, to any individual, research group,
+educational institution, or non-profit healthcare organization obtaining a copy
+of this software and associated documentation files (the 'Software'), to:
+
+  (a) Use, inspect, run, and execute the Software for non-commercial, educational,
+      academic evaluation, or charitable redistribution purposes.
+  (b) Modify, adapt, translate, and create derivative works from the source code.
+  (c) Distribute, publish, and deploy copies or modifications of the Software,
+      provided that the original copyright notice and this permissions text
+      are preserved in all distributions.
 
 --------------------------------------------------------------------------------
-3. HEALTHCARE & STATUTORY REGULATORY DISCLAIMER
+3. ETHICAL USAGE & PHARMACEUTICAL SAFETY POLICY
 --------------------------------------------------------------------------------
-MediBridge is an educational and technological demonstration platform.
-The software is not a certified medical device and does not substitute for
-professional medical, legal, or pharmaceutical counsel.
+This Software is designed exclusively for the safe, transparent, and regulated
+redistribution of surplus medicines. Any deployment of this Software must adhere
+to the following strict safety principles:
 
-Redistribution of pharmaceutical items must comply with relevant statutes,
-including the Drugs and Cosmetics Act, 1940, and local health authority mandates.
-The authors accept no liability for any adverse health events, improper storage,
-or regulatory non-compliance arising from the deployment of this codebase.
+  (a) No Expired Medications: Under no circumstances may this Software be used
+      to catalog, approve, or redistribute pharmaceuticals with less than 30 days
+      of remaining shelf-life.
+  (b) Mandatory Professional Verification: No medicine may be transferred without
+      prior physical inspection and digital sign-off by a licensed pharmacist.
+  (c) Prohibition of Controlled Narcotics: The Software must not be used for the
+      unlicensed exchange of Schedule X, narcotic, or habit-forming substances.
+  (d) Sealed Packaging Requirement: Loose tablets, opened syrups, unsealed bottles,
+      and compromised foils are strictly prohibited from redistribution.
 
 --------------------------------------------------------------------------------
-4. WARRANTY DISCLAIMER
+4. STATUTORY & HEALTHCARE REGULATORY COMPLIANCE
 --------------------------------------------------------------------------------
-THE SOFTWARE IS PROVIDED WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE
-LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF OR
-INABILITY TO USE THIS SOFTWARE.
+MediBridge is an academic research and technology demonstration platform.
+The Software is NOT certified as a medical device by any statutory authority.
+
+All physical redistribution operations conducted through or facilitated by this
+Software must strictly comply with applicable health statutes, including:
+  - The Drugs and Cosmetics Act, 1940 (India)
+  - The Drugs and Cosmetics Rules, 1945 (India)
+  - Guidelines issued by the Central Drugs Standard Control Organisation (CDSCO)
+  - Applicable state and local pharmacy council regulations.
+
+--------------------------------------------------------------------------------
+5. PRIVACY & DATA INTEGRITY OBLIGATIONS
+--------------------------------------------------------------------------------
+Deployers of this Software must maintain strict privacy safeguards:
+  - Personal Identifiable Information (PII) of donors must remain redacted.
+  - Camera EXIF GPS coordinates must be purged before image storage.
+  - The cryptographic integrity of the SHA-256 custody ledger must be maintained.
+
+--------------------------------------------------------------------------------
+6. DISCLAIMER OF WARRANTY & LIMITATION OF LIABILITY
+--------------------------------------------------------------------------------
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+IN NO EVENT SHALL THE AUTHORS, COPYRIGHT HOLDERS, OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, ADVERSE DRUG REACTIONS, MEDICAL
+EMERGENCIES, LOSS OF DATA, OR REGULATORY PENALTIES) ARISING IN ANY WAY OUT
+OF THE USE OF OR INABILITY TO USE THIS SOFTWARE.
 ================================================================================
